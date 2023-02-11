@@ -1,0 +1,144 @@
+generator db {
+  provider             = "prisma-client-py"
+  interface            = "asyncio"
+  recursive_type_depth = "5"
+  enable_experimental_decimal=true
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Collection {
+  id             String           @id
+  address        String           @unique
+  name           String?
+  type           String?
+  tokens         Int
+  owners         Int
+  salesVolume    Decimal
+  floor          Decimal?
+  description    String?
+  bannerImg      String
+  image          String
+  extURL         String?
+  DataPoint      DataPoint[]
+  RankTableEntry RankTableEntry[]
+}
+
+model DataPoint {
+  id           String     @id
+  timestamp    DateTime
+  avgPrice     Decimal?
+  maxPrice     Decimal?
+  minPrice     Decimal?
+  salesCount   BigInt?
+  salesVolume  Decimal?
+  tokensMinted Decimal?
+  tokensBurned Decimal?
+  totalMinted  Decimal?
+  totalBurned  Decimal?
+  ownersCount  BigInt?
+  collectionId String
+  Collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, timestamp])
+}
+
+model Example {
+  id        String   @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+}
+
+model OAuthProfile {
+  id              String   @id
+  userId          String
+  created_at      DateTime @default(now())
+  updated_at      DateTime
+  type            String
+  provider        String
+  providerOAuthId String
+  refresh_token   String?
+  access_token    String?
+  expires_at      Int?
+  token_type      String?
+  scope           String?
+  id_token        String?
+  session_state   String?
+  User            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerOAuthId])
+}
+
+model RankTable {
+  id             String           @id
+  type           CollectionsRank
+  timePeriod     RankPeriod
+  RankTableEntry RankTableEntry[]
+
+  @@unique([type, timePeriod])
+}
+
+model RankTableEntry {
+  id           String     @id
+  value        Decimal
+  tableId      String
+  collectionId String
+  Collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  RankTable    RankTable  @relation(fields: [tableId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, tableId])
+}
+
+model Session {
+  id        String   @id
+  sid       String   @unique
+  data      String
+  expiresAt DateTime
+}
+
+model User {
+  id            String         @id
+  name          String?        @db.VarChar(255)
+  email         String?        @unique
+  password      String?
+  verified      Boolean?       @default(false)
+  emailVerified DateTime?
+  canLink       Boolean        @default(false)
+  image         String?        @default("user_profilepic.png")
+  role          RoleEnumType?  @default(user)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime
+  OAuthProfile  OAuthProfile[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum CollectionsRank {
+  avg_price
+  max_price
+  sales_count
+  sales_volume
+}
+
+enum RankPeriod {
+  oneDay        @map("1_DAY")
+  sevenDays     @map("7_DAYS")
+  thirtyDays    @map("30_DAYS")
+  oneYear       @map("365_DAYS")
+  ninetyDays    @map("90_DAYS")
+  allTime       @map("ALL_TIME")
+}
+
+enum RoleEnumType {
+  user
+  admin
+}
