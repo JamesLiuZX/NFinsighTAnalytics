@@ -1,6 +1,12 @@
+# Mac Hidden Files
 __pycache__
-
 .DS_Store
 
+# Environment Variables
 .env
+
+# Python Venv
 .venv
+
+# Node Packages (for Prisma)
+node_modules
