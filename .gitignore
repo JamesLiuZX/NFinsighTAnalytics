@@ -10,3 +10,6 @@ __pycache__
 
 # Node Packages (for Prisma)
 node_modules
+
+# Editor Specific
+.vscode
