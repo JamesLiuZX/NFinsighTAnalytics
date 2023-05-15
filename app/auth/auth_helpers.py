@@ -7,11 +7,10 @@ from typing import Annotated
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
 
-from ..dependencies import oauth2_scheme, pwd_context, DOTENV_PATH
+from ..dependencies import oauth2_scheme, pwd_context
 from .models import TokenData, User, UserInDB
 
 
-dotenv.load_dotenv(DOTENV_PATH)
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30

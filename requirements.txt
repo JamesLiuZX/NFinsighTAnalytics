@@ -6,3 +6,10 @@ python-multipart
 
 python-jose[cryptography]
 passlib[bcrypt]
+
+cassandra-driver==3.20.2
+requests
+pyopenssl
+
+azure-cosmos
+aiohttp
