@@ -2,14 +2,19 @@ import dotenv
 import os
 
 from fastapi import FastAPI
-from azure.cosmos.aio import CosmosClient
-from azure.cosmos import exceptions
+
+from cassandra.auth import PlainTextAuthProvider
+from cassandra.cluster import Cluster
+from cassandra.cqlengine import connection, management
+from ssl import PROTOCOL_TLSv1_2, SSLContext, CERT_NONE
 
 from .auth.authenticate import router as auth_router
+from .nft.models import Collection, DataPoint, Ranking
 
 app = FastAPI()
 
 app.include_router(auth_router)
+
 
 # Initialise env values
 async def read_env_values():
@@ -21,15 +26,25 @@ async def read_env_values():
 @app.on_event("startup")
 async def connect_db():
     await read_env_values()
-    app.cosmos_client = CosmosClient(
-        os.getenv("DATABASE_URI"),
-        os.getenv("DATABASE_KEY")
+    
+    ssl_context = SSLContext(PROTOCOL_TLSv1_2)
+    ssl_context.verify_mode = CERT_NONE
+    auth_provider = PlainTextAuthProvider(
+        username=os.environ['DATABASE_USERNAME'],
+        password=os.environ['DATABASE_PASSWORD']
     )
-    try:
-        app.database = app.cosmos_client.get_database_client(os.getenv("DATABASE_NAME"))
-    except exceptions.CosmosResourceNotFoundError:
-        # Close app if cannot connect to db
-        print("Cannot find database")
-        exit(1)
 
+    cluster = Cluster(
+        [os.environ['DATABASE_CONTACT_POINT']],
+        port=int(os.environ['DATABASE_PORT']),
+        auth_provider=auth_provider,
+        ssl_context=ssl_context
+    )
+
+    app.db_session = cluster.connect()
+    app.db_connection = connection.register_connection('cluster1', session=app.db_session)
+
+    management.sync_table(Collection, keyspaces=[os.environ['MAIN_KEYSPACE']], connections=[app.db_connection.name])
+    management.sync_table(Ranking, keyspaces=[os.environ['MAIN_KEYSPACE']], connections=[app.db_connection.name])
+    management.sync_table(DataPoint, keyspaces=[os.environ['MAIN_KEYSPACE']], connections=[app.db_connection.name])
 

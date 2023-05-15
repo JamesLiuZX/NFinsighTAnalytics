@@ -2,7 +2,7 @@ import dotenv
 import os
 
 from datetime import datetime, timedelta
-from typing import Annotated
+from typing import Annotated, Union
 
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
@@ -41,7 +41,7 @@ def get_user(db, username: str):
         return UserInDB(**user_dict)
 
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
+def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None):
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
