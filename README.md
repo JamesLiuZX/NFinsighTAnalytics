@@ -7,10 +7,13 @@ To run, simply follow these steps:
 1. Clone the repo.
 2. Create a virtual environment within the directory. We recommend using Python 3.10.
 3. Activate the virtual environment.
-4. Run these commands:
+4. Grab your database connection strings and populate it in a `.env` file in the `/app` folder.
+    - You may use the `.env.example` as a guideline.
+    - You should also generate an app secret for authenticating JWT tokens.
+
+5. Run these commands:
 
 ```shell
-cp ./app/.env.example ./app/.env
 python -m pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
