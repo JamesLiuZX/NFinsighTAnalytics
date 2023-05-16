@@ -10,10 +10,13 @@ from ssl import PROTOCOL_TLSv1_2, SSLContext, CERT_NONE
 
 from .auth.authenticate import router as auth_router
 from .nft.models import Collection, DataPoint, Ranking
+from .nft.populate_job import update_rankings
+from .nft.mnemonic.api import router as mnemonic_router
 
 app = FastAPI()
 
 app.include_router(auth_router)
+app.include_router(mnemonic_router, prefix="/mnemonic")
 
 
 # Initialise env values
@@ -27,6 +30,7 @@ async def read_env_values():
 async def connect_db():
     await read_env_values()
     
+    # Create Auth context for DB
     ssl_context = SSLContext(PROTOCOL_TLSv1_2)
     ssl_context.verify_mode = CERT_NONE
     auth_provider = PlainTextAuthProvider(
@@ -41,10 +45,13 @@ async def connect_db():
         ssl_context=ssl_context
     )
 
+    # Authenticate and save session for reuse
     app.db_session = cluster.connect()
     app.db_connection = connection.register_connection('cluster1', session=app.db_session)
 
+    # Sync Schema
     management.sync_table(Collection, keyspaces=[os.environ['MAIN_KEYSPACE']], connections=[app.db_connection.name])
     management.sync_table(Ranking, keyspaces=[os.environ['MAIN_KEYSPACE']], connections=[app.db_connection.name])
     management.sync_table(DataPoint, keyspaces=[os.environ['MAIN_KEYSPACE']], connections=[app.db_connection.name])
+
 

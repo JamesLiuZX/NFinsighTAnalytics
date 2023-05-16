@@ -13,3 +13,4 @@ pyopenssl
 
 azure-cosmos
 aiohttp
+httpx
