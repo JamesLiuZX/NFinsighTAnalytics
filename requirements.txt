@@ -3,6 +3,7 @@ uvicorn[standard]
 
 python-dotenv
 python-multipart
+orjson
 
 python-jose[cryptography]
 passlib[bcrypt]
@@ -10,7 +11,7 @@ passlib[bcrypt]
 cassandra-driver==3.27.0
 requests
 pyopenssl
-
 azure-cosmos
-aiohttp
+
 httpx
+aiometer==0.3.*

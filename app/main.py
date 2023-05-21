@@ -9,14 +9,17 @@ from cassandra.cqlengine import connection, management
 from ssl import PROTOCOL_TLSv1_2, SSLContext, CERT_NONE
 
 from .auth.authenticate import router as auth_router
-from .nft.models import Collection, DataPoint, Ranking
-from .nft.populate_job import update_rankings
+from .nft.gallop.api import router as gallop_router
+from .nft.db.models import Collection, DataPoint, Ranking
+from .nft.populate_job import router as populate_router
 from .nft.mnemonic.api import router as mnemonic_router
 
 app = FastAPI()
 
 app.include_router(auth_router)
+app.include_router(gallop_router, prefix="/gallop")
 app.include_router(mnemonic_router, prefix="/mnemonic")
+app.include_router(populate_router)
 
 
 # Initialise env values
