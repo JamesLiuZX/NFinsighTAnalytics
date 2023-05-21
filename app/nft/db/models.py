@@ -52,9 +52,9 @@ class DataPoint(Model):
     id              = columns.UUID(primary_key=True, default=uuid.uuid4)
     
     #One partition per collection
-    collection      = columns.Text(partition_key=True, required=True) 
+    collection      = columns.Text(partition_key=True, primary_key=True, required=True) 
     
-    time_stamp       = columns.DateTime(required=True)
+    time_stamp       = columns.DateTime(primary_key=True, required=True)
 
     average_price   = columns.Decimal()
     max_price       = columns.Decimal()
