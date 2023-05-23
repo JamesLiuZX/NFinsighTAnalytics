@@ -15,3 +15,6 @@ azure-cosmos
 
 httpx
 aiometer==0.3.*
+
+# Celery
+celery[amqp,redis]
