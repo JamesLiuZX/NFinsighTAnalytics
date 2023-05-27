@@ -39,6 +39,7 @@ docker-compose up
 ```
 
 As per our docker config, this will spin up a docker container that has both a RabbitMQ message queue and a Redis in-memory database.
+
 4. Run the command `celery -A app.celery worker -l info --pool=solo`. This should spin up your celery server.
 5. Now, your app may call any function denoted with `@app.task` in `app/celery.py`. This should run in the background.
 6. To illustrate, open a separate shell with the same venv activated, and run this:
