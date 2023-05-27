@@ -25,7 +25,7 @@ class MnemonicQuery__Marketplaces(Enum):
 class MnemonicQuery__RankType(Enum):
     AVG_PRICE = "avg_price"
     MAX_PRICE = "max_price"
-    SALES_VOLUME = "sales_volume"
-    SALES_COUNT = "sales_quantity"
+    # SALES_VOLUME = "sales_volume"     # Gallop gives more accurate metrics
+    # SALES_COUNT = "sales_quantity"    # Gallop gives more accurate metrics
 
 

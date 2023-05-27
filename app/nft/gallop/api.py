@@ -7,7 +7,7 @@ from httpx import AsyncClient
 from typing import List
 
 from .gallop_types import GallopRankMetric, GallopRankingPeriod
-from .response_types import GallopFloorResponse
+from .response_types import GallopFloorResponse, GallopTopCollectionResponse
 
 
 client = AsyncClient()
@@ -23,17 +23,12 @@ def get_header():
     }
 
 
-@router.get("/top_collections", deprecated=True)
+@router.get("/top_collections")
 async def get_top_collections(
         rank: GallopRankMetric,
         rank_duration: GallopRankingPeriod,
         num_records: int = 100
-):
-
-    """
-    As the Gallop API returns an empty leaderboard for this endpoint, this operation will temporarily be migrated back to Mnemonic.
-    """
-
+) -> GallopTopCollectionResponse:
     payload = {
         "interval": rank_duration.value,
         "ranking_metric": rank.value,
