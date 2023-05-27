@@ -32,7 +32,11 @@ Here's how to run the demo:
 
 1. If you haven't already, activate your virtual environment for python, and install the `requirements.txt` as described above.
 2. Ensure that your system has Docker installed, and that the Docker daemon is up and running. In OSes with GUI, you may simply launch the Docker Desktop client.
-3. Run this command in your terminal:
+3. Ensure all your environment variables are set. Most importantly, this:
+
+  - `EVENTLET_HUB=poll`. To check this, run `echo $EVENTLET_HUB`
+
+4. Run this command in your terminal:
 
 ```sh
 docker-compose up
@@ -40,9 +44,9 @@ docker-compose up
 
 As per our docker config, this will spin up a docker container that has both a RabbitMQ message queue and a Redis in-memory database.
 
-4. Run the command `celery -A app.celery worker -l info --pool=solo`. This should spin up your celery server.
-5. Now, your app may call any function denoted with `@app.task` in `app/celery.py`. This should run in the background.
-6. To illustrate, open a separate shell with the same venv activated, and run this:
+5. Run the command `celery -A app.celery worker -l info -P eventlet`. This should spin up your celery server.
+6. Now, your app may call any function denoted with `@app.task` in `app/celery.py`. This should run in the background.
+7. To illustrate, open a separate shell with the same venv activated, and run this:
 
 ```sh
 python3
