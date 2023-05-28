@@ -1,11 +1,12 @@
-from pydantic import BaseModel
 from typing import List, TypedDict, Union
 
-from .gallop_types import GallopRankMetric, GallopRankingPeriod
+from pydantic import BaseModel
+
+from .gallop_types import GallopRankingPeriod, GallopRankMetric
 
 
 class Floor__MarketPlaceEntry(BaseModel):
-    updated_at: str #DateTime string
+    updated_at: str  # DateTime string
     floor_price: Union[float, None]
     marketplace: str
     collection_id: str
@@ -52,5 +53,3 @@ class TopCollectionResponse(BaseModel):
 class GallopTopCollectionResponse(TypedDict):
     status: int
     response: TopCollectionResponse
-    
-

@@ -1,14 +1,12 @@
 import os
-import json
-
-from fastapi import APIRouter
 from functools import lru_cache
-from httpx import AsyncClient
 from typing import List
 
-from .gallop_types import GallopRankMetric, GallopRankingPeriod
-from .response_types import GallopFloorResponse, GallopTopCollectionResponse
+from fastapi import APIRouter
+from httpx import AsyncClient
 
+from .gallop_types import GallopRankingPeriod, GallopRankMetric
+from .response_types import GallopFloorResponse, GallopTopCollectionResponse
 
 client = AsyncClient()
 router = APIRouter()
@@ -34,7 +32,7 @@ async def get_top_collections(
         "ranking_metric": rank.value,
         "page_size": num_records
     }
-    url = f'https://api.prod.gallop.run/v1/analytics/eth/getLeaderBoard'
+    url = 'https://api.prod.gallop.run/v1/analytics/eth/getLeaderBoard'
     header = get_header()
     response = await client.post(
         url,
@@ -59,5 +57,3 @@ async def floor_price(collection_addresses: List[str]) -> GallopFloorResponse:
 
     assert response.status_code == 200
     return response.json()
-
-

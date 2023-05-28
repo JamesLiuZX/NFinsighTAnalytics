@@ -27,5 +27,3 @@ class MnemonicQuery__RankType(Enum):
     MAX_PRICE = "max_price"
     # SALES_VOLUME = "sales_volume"     # Gallop gives more accurate metrics
     # SALES_COUNT = "sales_quantity"    # Gallop gives more accurate metrics
-
-
