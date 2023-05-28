@@ -1,0 +1,1 @@
+uvicorn fastapi_app.main:app --reload

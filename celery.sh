@@ -1,0 +1,1 @@
+celery -A celery_app.celery worker --loglevel info -P eventlet --autoscale 8,16

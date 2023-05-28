@@ -44,20 +44,28 @@ docker-compose up
 
 As per our docker config, this will spin up a docker container that has both a RabbitMQ message queue and a Redis in-memory database.
 
-5. Run the command `celery -A app.celery worker -l info -P eventlet`. This should spin up your celery server.
+5. In a new terminal, run the script `./celery.sh`. This should spin up your celery server.
 6. Now, your app may call any function denoted with `@app.task` in `app/celery.py`. This should run in the background.
 7. To illustrate, open a separate shell with the same venv activated, and run this:
 
 ```sh
 python3
 
->> from app.celery import say_hello
+>> from celery_app.celery import say_hello
 >> say_hello.delay("your_name")
 ```
 
 You should be able to see the Celery worker handle and execute the task. In the future, we hope to be able to implement the necessary APIs to manage, start and stop tasks.
 
-Remember to run `docker-compose down` to stop your Docker container when you're done.
+8. You may also run the script `./flower.sh` in another terminal to see a GUI to view task running statuses at `localhost:5556`.
+
+9. To spin down the celery app and related resources, perform these actions in this sequence:
+
+  - Terminate the flower script by running <kbd>Cmd+C</kbd> in the `flower.sh` terminal.
+  - Terminate the celery script by running <kbd>Cmd+C</kbd> in the `celery.sh` terminal.
+  - Terminate the Docker resources by running <kbd>Cmd+C</kbd> in the `docker-compose` terminal.
+  
+Alternatively, you can run `docker-compose down` from another terminal to stop your Docker containers when you're done.
 
 ## Testing kubernetes
 

@@ -1,0 +1,1 @@
+celery -A celery_app.celery flower --port=5556

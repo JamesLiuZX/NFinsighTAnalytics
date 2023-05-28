@@ -13,6 +13,3 @@ node_modules
 
 # Editor Specific
 .vscode
-
-# Custom Scripts
-**/*.sh

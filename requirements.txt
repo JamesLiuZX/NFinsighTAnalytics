@@ -19,3 +19,4 @@ aiometer==0.3.*
 # Celery
 celery[amqp,redis]
 eventlet
+flower
