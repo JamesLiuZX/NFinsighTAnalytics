@@ -14,8 +14,14 @@ To run, simply follow these steps:
 5. Run these commands:
 
 ```shell
+# Install requirements
 python -m pip install -r requirements.txt
-uvicorn app.main:app --reload
+
+# Add execute permissions for the script
+chmod +x ./scripts/api.sh`
+
+# Run the app
+./scripts/api.sh # OR uvicorn fastapi_app.main:app --reload
 ```
 
 The server should be up and running. To visit the OpenAPI spec, simply go to `127.0.0.1:8000/docs` in your browser.
@@ -39,16 +45,18 @@ Here's how to run the demo:
 4. Run this command in your terminal:
 
 ```sh
+# Start the containers for the message broker and results backend
 docker-compose up
 ```
 
 As per our docker config, this will spin up a docker container that has both a RabbitMQ message queue and a Redis in-memory database.
 
-5. In a new terminal, run the script `./celery.sh`. This should spin up your celery server.
+5. In a new terminal, run the script `./scripts/celery.sh`. This should spin up your celery server.
 6. Now, your app may call any function denoted with `@app.task` in `app/celery.py`. This should run in the background.
 7. To illustrate, open a separate shell with the same venv activated, and run this:
 
 ```sh
+# Start a REPL environment for testing
 python3
 
 >> from celery_app.celery import say_hello
@@ -57,7 +65,7 @@ python3
 
 You should be able to see the Celery worker handle and execute the task. In the future, we hope to be able to implement the necessary APIs to manage, start and stop tasks.
 
-8. You may also run the script `./flower.sh` in another terminal to see a GUI to view task running statuses at `localhost:5556`.
+8. You may also run the script `./scripts/flower.sh` in another terminal to see a GUI to view task running statuses at `localhost:5556`.
 
 9. To spin down the celery app and related resources, perform these actions in this sequence:
 
@@ -91,6 +99,7 @@ echo "password: $password"
 5. Expose the management UI.
 
 ```sh
+# Forward the ports to the current machine
 kubectl -n nf-etl port-forward service/rabbitmq 15672
 ```
 
