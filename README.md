@@ -59,6 +59,47 @@ You should be able to see the Celery worker handle and execute the task. In the 
 
 Remember to run `docker-compose down` to stop your Docker container when you're done.
 
+## Testing kubernetes
+
+To start, ensure you have the following:
+
+- Docker Desktop
+  - Ensure that you have at least 2 CPU cores enabled for minikube to run.
+- minikube
+- kubectl
+
+1. Launch the Docker daemon/desktop app and run `minikube start`.
+2. Run `kubectl apply -f "https://github.com/rabbitmq/cluster-operator/releases/latest/download/cluster-operator.yml"`
+3. Run `kubectl apply -f k8s_deployment.yml`. This will apply the cluster settings and start a Kubernetes cluster with the RabbitMQ server(s).
+4. To get the default credentials, run the following:
+
+```sh
+username="$(kubectl get secret rabbitmq-default-user -o jsonpath='{.data.username}' | base64 --decode)"
+echo "username: $username"
+password="$(kubectl get secret rabbitmq-default-user -o jsonpath='{.data.password}' | base64 --decode)"
+echo "password: $password"
+```
+
+5. Expose the management UI.
+
+```sh
+kubectl -n nf-etl port-forward service/rabbitmq 15672
+```
+
+To ensure best results, use Chrome or Safari to view the webpage at `http://localhost:15672`.
+
+6. You may also expose the AMQP message queue server at port `5672` in a similar fashion.
+7. Once done, close all connections and run the following:
+
+```sh
+kubectl -n nf-etl delete pod,statefulset,svc --all # Terminate all nodes and services within the namespace.
+
+minikube stop #Stop the docker server running Kubernetes
+```
+
+8. Due to small scale and infrastructure costs, Kubernetes is not as practical as Docker-Compose for now. In the future, when scale increases, we will migrate over.
+
+
 ## Upcoming Features
 
 1. Authenticated route to trigger jobs
