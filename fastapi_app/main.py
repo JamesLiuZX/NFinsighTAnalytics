@@ -24,7 +24,7 @@ app.include_router(populate_router)
 
 # Initialise env values
 async def read_env_values():
-    DOTENV_PATH = os.getcwd() + "/app/.env"
+    DOTENV_PATH = os.getcwd() + "/fastapi_app/.env"
     dotenv.load_dotenv(DOTENV_PATH)
 
 
