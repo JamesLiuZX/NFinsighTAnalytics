@@ -23,7 +23,7 @@ def get_header():
     }
 
 
-@router.get("/top_collections")
+@router.get("/top_collections", response_model=GallopTopCollectionResponse)
 async def get_top_collections(
         rank: GallopRankMetric,
         rank_duration: GallopRankingPeriod,

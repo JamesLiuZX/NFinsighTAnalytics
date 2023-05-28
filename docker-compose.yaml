@@ -1,14 +1,27 @@
 version: "3"
 services:
   rabbitmq:
-    image: rabbitmq:latest
+    image: rabbitmq:3-management-alpine
+    container_name: 'rabbitmq'
     environment:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
     ports:
-      - "5672:5672"
+      - 5672:5672
+      - 15672:15672
+    volumes:
+      - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/
+      - ~/.docker-conf/rabbitmq/log/:/var/log/rabbitmq
+    networks:
+      - analytics_net
 
   redis:
     image: redis:latest
     ports:
-      - "6379:6379"
+      - 6379:6379
+    networks:
+      - analytics_net
+
+networks:
+  analytics_net:
+    driver: bridge
