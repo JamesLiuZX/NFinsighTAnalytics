@@ -6,18 +6,12 @@ from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
 from cassandra.cqlengine import connection, management
 from cassandra.policies import RoundRobinPolicy
-from cassandra.cqlengine.connection import (
-    cluster as cql_cluster, session as cql_session)
 
 from celery import Task
 from celery.app import Celery
 from celery.signals import worker_process_init, beat_init
 
-
 from .db.models import Collection, DataPoint, Ranking
-
-broker_url = "amqp://localhost"
-redis_url = "redis://localhost"
 
 
 class DbTask(Task):
@@ -86,16 +80,20 @@ class DbTask(Task):
     def get_db_connection(self):
         return DbTask.get_db()
 
+BROKER_URL = "amqp://localhost"
+REDIS_URL = "redis://localhost"
 
 worker_process_init.connect(DbTask.get_db)
 beat_init.connect(DbTask.get_db)
-app = Celery(__name__, broker=broker_url, backend=redis_url)
+
+app = Celery(__name__, broker=BROKER_URL, backend=REDIS_URL)
 
 
 @app.task(base=DbTask, bind=True)
 def create_collection(self: DbTask, collection):
     connection = self.get_db_connection() # Test Cassandra connectivity
     Collection.objects.all()
+
 
 @app.task(base=DbTask, bind=True)
 def upsert_collections(self, collections):
