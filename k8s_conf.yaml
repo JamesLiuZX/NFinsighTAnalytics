@@ -4,8 +4,8 @@ metadata:
   name: nf-etl
   labels:
     env: development
----
 
+---
 # Deployment for RabbitMQ
 apiVersion: apps/v1
 kind: Deployment

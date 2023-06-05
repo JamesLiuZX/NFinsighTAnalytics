@@ -4,10 +4,10 @@ from functools import partial
 from fastapi import APIRouter
 from fastapi.responses import ORJSONResponse
 
-from .db.models import *
 from .mnemonic.mnemonic_types import *
 from .mnemonic.api import *
 
+from ...celery_app.celery import create_collection
 
 router = APIRouter()
 
@@ -52,7 +52,6 @@ async def get_collection_data(collection_address: str):
     """
     
     try:
-        collection = Collection.get(collection_address = collection_address)
         return populate_collection_data(collection_address)  # If it exists, only update past 7 days of data
     except DoesNotExist:
         return populate_collection_data(collection_address, MnemonicQuery__RecordsDuration.ONE_YEAR)
