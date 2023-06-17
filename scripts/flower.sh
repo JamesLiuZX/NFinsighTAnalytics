@@ -1,1 +1,1 @@
-celery flower -A celery_app.celery  --port=5556 
+celery flower -A etl.celery_app.celery  --port=5556 

@@ -28,6 +28,24 @@ The server should be up and running. To visit the OpenAPI spec, simply go to `12
 
 Developed by @SeeuSim and @JamesLiuZX
 
+## Database Introspection
+
+The Python ORM by DataStax has some flaws. Hence, we execute our queries using only its raw CQL execution engine.
+
+To connect to the database, run the following in your terminal, using Docker:
+
+```sh
+docker run -it --rm -e SSL_VALIDATE=false -e SSL_VERSION=TLSv1_2 cassandra:3.11 cqlsh \
+  <database_account_name>.cassandra.cosmos.azure.com 10350 \
+  -u <database_user> \
+  -p <database_password> \
+  -k <database_keyspace_name> --ssl
+```
+
+Thereafter, you should be able to test and execute queries using [`CQL`](https://cassandra.apache.org/doc/latest/cassandra/cql/index.html).
+
+Once your queries have been validated, use `session.prepare` and `session.execute` in your Python code to execute database statements.
+
 ## Celery Demo
 
 If you're wondering what Celery is, it is a backend tasks broker that can be used to run background tasks.

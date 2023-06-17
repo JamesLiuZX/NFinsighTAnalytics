@@ -1,1 +1,1 @@
-uvicorn fastapi_app.main:app --reload
+uvicorn etl.fastapi_app.main:app --reload

@@ -3,11 +3,12 @@ from cassandra.cqlengine.query import DoesNotExist
 from functools import partial
 from fastapi import APIRouter
 from fastapi.responses import ORJSONResponse
+import time
 
 from .mnemonic.mnemonic_types import *
 from .mnemonic.api import *
 
-from ...celery_app.celery import create_collection
+from ...celery_app.celery import create_collection, create_ranking, delete_rankings
 
 router = APIRouter()
 
@@ -15,7 +16,7 @@ REQUESTS_PER_TIME_PERIOD = 30
 TIME_PERIOD_IN_SECONDS = 1
 
 # WIP
-@router.get("/nft/populate", response_class=ORJSONResponse)
+@router.get("/nft/populate")
 async def update_collections():
     """
     Plan:
@@ -31,19 +32,38 @@ async def update_collections():
     - get_data operation done
     - Now, need to optimise an upsert_data operation to act on the returned data.
     """
-    out = []
+    out = set()
+    delete_rankings.delay()
     for rank in MnemonicQuery__RankType._member_map_:
         for duration in MnemonicQuery__RecordsDuration._member_map_:
             # """
-            top_collections = await get_top_collections(
+            top_collections: MnemonicTopCollectionsResponse = await get_top_collections(
+                # MnemonicQuery__RankType.AVG_PRICE,
+                # MnemonicQuery__RecordsDuration.ONE_DAY
                 MnemonicQuery__RankType[rank],
                 MnemonicQuery__RecordsDuration[duration]
             )
-            out.append(top_collections)
-            print(f'{rank}|{duration}\n{len(top_collections["collections"])} collections')
-            # """
-            # print(rank, duration)
-    return ORJSONResponse(out)
+            for ranking in top_collections['collections']:
+                out.add(ranking['collection']['contractAddress'])
+                create_ranking.apply_async(
+                    (
+                        ranking['collection']['contractAddress'],
+                        ranking['metricValue'],
+                        # MnemonicQuery__RankType.AVG_PRICE._value_,
+                        # MnemonicQuery__RecordsDuration.ONE_DAY._value_
+                        MnemonicQuery__RankType[rank]._value_,
+                        MnemonicQuery__RecordsDuration[duration]._value_
+                    ))
+                time.sleep(0.05)
+                
+    return {
+        'count': out.__len__(),
+        'collections': list(out)
+    }
+
+@router.get("/nft/rankings/delete")
+async def delete_rankings_route():
+    res = delete_rankings.delay()
 
 
 async def get_collection_data(collection_address: str):
