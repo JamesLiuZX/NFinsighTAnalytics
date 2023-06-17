@@ -8,13 +8,9 @@ from cassandra.cluster import Cluster
 from cassandra.cqlengine import connection
 from cassandra.policies import RoundRobinPolicy
 
-from celery import Task
 from celery.app import Celery
 
-from .db.models import Collection, DataPoint, Ranking
-
-
-class CassandraDb(Task):
+class CassandraDb():
     db_session = None
     db_connection = None
 
@@ -71,10 +67,32 @@ app = Celery(__name__, broker=BROKER_URL, backend=REDIS_URL)
 
 
 @app.task
-def create_collection(collection: Collection):
-    connection = CassandraDb.get_db_connection()  # Test Cassandra connectivity
-    Collection.create(**collection)
+def create_collection(collection):
+    pass
 
+
+@app.task
+def get_rankings():
+    session = CassandraDb.get_db_session()
+
+    res = session.execute(
+        """
+        SELECT *
+        FROM ranking
+        WHERE rank = 'avg_price'
+          AND duration = 'DURATION_1_DAY';
+        """
+    )
+
+    for row in res:
+        # row: {
+        #   'collection' : '',
+        #   'duration': '',
+        #   'rank': '',
+        #   'value': Decimal()
+        # }
+        pass
+    
 
 @app.task
 def upsert_collections(collections):
