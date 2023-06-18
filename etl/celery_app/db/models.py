@@ -95,7 +95,7 @@ class DataPoint(Model):
         average_price DECIMAL,
         max_price DECIMAL,
         min_price DECIMAL,
-        sales_count DECIMAL,
+        sales_count BIGINT,
         sales_volume DECIMAL,
         tokens_minted BIGINT,
         tokens_burned BIGINT,

@@ -22,7 +22,7 @@ def get_header():
 
 
 @router.get("/top_collections", response_model=GallopTopCollectionResponse)
-async def get_top_collections(
+async def get_top_collections_gallop(
     rank: GallopRankMetric, rank_duration: GallopRankingPeriod, num_records: int = 100
 ) -> GallopTopCollectionResponse:
     payload = {

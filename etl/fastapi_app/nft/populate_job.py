@@ -3,11 +3,40 @@ from functools import partial
 from fastapi import APIRouter
 import time
 
-from .mnemonic.api import *
-from .mnemonic.mnemonic_types import *
-from .mnemonic.response_types import *
+from .gallop.api import get_top_collections_gallop
 
-from ...celery_app.celery import (
+from .gallop.gallop_types import (
+    GallopRankMetric,
+    GallopRankingPeriod,
+)
+
+from .gallop.response_types import GallopTopCollectionResponse
+
+from .mnemonic.api import (
+    get_collection_meta,
+    get_collection_owners_count,
+    get_collection_price_history,
+    get_collection_sales_volume,
+    get_collection_token_supply,
+    get_top_collections,
+)
+
+from .mnemonic.mnemonic_types import (
+    MnemonicQuery__RankType,
+    MnemonicQuery__RecordsDuration,
+)
+
+from .mnemonic.response_types import (
+    MnemonicTopCollectionsResponse,
+    MnemonicCollectionsMetaResponse,
+    MnemonicResponse__CollectionMeta__Metadata__Type,
+)
+
+from etl.celery_app.celery import (
+    update_owners,
+    update_prices,
+    update_sales,
+    update_tokens,
     upsert_collection,
     create_ranking,
     delete_rankings,
@@ -62,6 +91,26 @@ async def update_collections_ranking():
                 )
                 time.sleep(CASSANDRA_DELAY)
 
+    for rank in GallopRankMetric._member_map_:
+        for duration in GallopRankingPeriod._member_map_:
+            top_collections: GallopTopCollectionResponse = (
+                await get_top_collections_gallop(
+                    GallopRankMetric[rank],
+                    GallopRankingPeriod[duration],
+                )
+            )
+            for ranking in top_collections["response"]["leaderboard"]:
+                out.add(ranking['collection_address'])
+                create_ranking.apply_async(
+                    (
+                        ranking["collection_address"],
+                        ranking["value"],
+                        GallopRankMetric[rank]._value_,
+                        GallopRankingPeriod[duration]._value_,
+                    )
+                )
+                time.sleep(CASSANDRA_DELAY)
+
     return {
         "count": out.__len__(),
         "collections": list(out),
@@ -93,6 +142,11 @@ async def get_collection_data(
 
     metadata, prices, sales, tokens, owners = results
     await populate_collection_meta(contract_address, metadata)
+
+    update_prices.apply_async(args=(contract_address, prices))
+    update_sales.apply_async(args=(contract_address, sales))
+    update_tokens.apply_async(args=(contract_address, tokens))
+    update_owners.apply_async(args=(contract_address, owners))
 
     return results
 
@@ -140,10 +194,3 @@ async def populate_collection_meta(
             "type": ",".join(list(meta_response["types"])),
         },
     )
-
-
-async def populate_collection_prices(
-    contract_address: str, prices: MnemonicPriceSeries
-):
-    for price_point in prices["dataPoints"]:
-        pass

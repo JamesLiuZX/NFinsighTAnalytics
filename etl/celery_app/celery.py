@@ -9,6 +9,14 @@ from cassandra.cqlengine import connection
 from cassandra.policies import RoundRobinPolicy
 
 from celery.app import Celery
+from .celery_utils import format_timestring
+
+from etl.fastapi_app.nft.mnemonic.response_types import (
+    MnemonicOwnersSeries,
+    MnemonicPriceSeries,
+    MnemonicSalesVolumeSeries,
+    MnemonicTokensSeries,
+)
 
 
 class CassandraDb:
@@ -150,11 +158,6 @@ def get_rankings():
 
 
 @app.task
-def upsert_collections(collections):
-    pass
-
-
-@app.task
 def create_ranking(
     contract_address: str, metric_value: str, rank_type: str, rank_duration: str
 ):
@@ -190,10 +193,152 @@ def delete_rankings():
 
 
 @app.task
-def upsert_datapoint(datapoint):
-    pass
+def update_prices(contract_address: str, prices: MnemonicPriceSeries):
+    session = CassandraDb.get_db_session()
+    statement = session.prepare(
+        """
+        UPDATE data_point
+           SET min_price = ?,
+               max_price = ?,
+               average_price = ?
+            WHERE collection = ?
+              AND time_stamp = ?
+        """
+    )
+    errors = []
+    for point in prices["dataPoints"]:
+        try:
+            session.execute(
+                statement,
+                [
+                    Decimal(point["min"]),
+                    Decimal(point["max"]),
+                    Decimal(point["avg"]),
+                    contract_address,
+                    format_timestring(point["timestamp"]),
+                ],
+            )
+        except Exception as e:
+            errors.append(
+                {
+                    "point": f'price/{contract_address}/{point["timestamp"]}',
+                    "message": e.__str__(),
+                }
+            )
+    return {
+        "operation": f"price/{contract_address}",
+        "status": "success" if not errors else errors,
+    }
 
 
 @app.task
-def upsert_datapoints(datapoints):
-    pass
+def update_sales(contract_address: str, sales: MnemonicSalesVolumeSeries):
+    session = CassandraDb.get_db_session()
+    statement = session.prepare(
+        """
+        UPDATE data_point
+           SET sales_count = ?,
+               sales_volume = ?
+            WHERE collection = ?
+              AND time_stamp = ?
+        """
+    )
+    errors = []
+    for point in sales["dataPoints"]:
+        try:
+            session.execute(
+                statement,
+                [
+                    int(point["quantity"]),
+                    Decimal(point["volume"]),
+                    contract_address,
+                    format_timestring(point["timestamp"]),
+                ],
+            )
+        except Exception as e:
+            errors.append(
+                {
+                    "point": f'sales/{contract_address}/{point["timestamp"]}',
+                    "message": e.__str__(),
+                }
+            )
+    return {
+        "operation": f"sales/{contract_address}",
+        "status": "success" if not errors else errors,
+    }
+
+
+@app.task
+def update_tokens(contract_address: str, tokens: MnemonicTokensSeries):
+    session = CassandraDb.get_db_session()
+    statement = session.prepare(
+        """
+        UPDATE data_point
+           SET tokens_minted = ?,
+               tokens_burned = ?,
+               total_minted = ?,
+               total_burned = ?
+            WHERE collection = ?
+              AND time_stamp = ?
+        """
+    )
+    errors = []
+    for point in tokens["dataPoints"]:
+        try:
+            session.execute(
+                statement,
+                [
+                    int(point["minted"]),
+                    int(point["burned"]),
+                    int(point["totalMinted"]),
+                    int(point["totalBurned"]),
+                    contract_address,
+                    format_timestring(point["timestamp"]),
+                ],
+            )
+        except Exception as e:
+            errors.append(
+                {
+                    "point": f'tokens/{contract_address}/{point["timestamp"]}',
+                    "message": e.__str__(),
+                }
+            )
+    return {
+        "operation": f"tokens/{contract_address}",
+        "status": "success" if not errors else errors,
+    }
+
+
+@app.task
+def update_owners(contract_address: str, owners: MnemonicOwnersSeries):
+    session = CassandraDb.get_db_session()
+    statement = session.prepare(
+        """
+        UPDATE data_point
+           SET owners_count = ?
+            WHERE collection = ?
+              AND time_stamp = ?
+        """
+    )
+    errors = []
+    for point in owners["dataPoints"]:
+        try:
+            session.execute(
+                statement,
+                [
+                    int(point["count"]),
+                    contract_address,
+                    format_timestring(point["timestamp"]),
+                ],
+            )
+        except Exception as e:
+            errors.append(
+                {
+                    "point": f'owners/{contract_address}/{point["timestamp"]}',
+                    "message": e.__str__(),
+                }
+            )
+    return {
+        "operation": f"owners/{contract_address}",
+        "status": "success" if not errors else errors,
+    }
