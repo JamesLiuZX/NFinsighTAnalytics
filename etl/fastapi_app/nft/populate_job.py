@@ -38,7 +38,8 @@ from etl.celery_app.celery import (
     update_sales,
     update_tokens,
     upsert_collection,
-    create_ranking,
+    # create_ranking,
+    create_rankings,
     delete_rankings,
     CassandraDb,
 )
@@ -46,7 +47,7 @@ from etl.celery_app.celery import (
 router = APIRouter()
 
 TIME_PERIOD_IN_SECONDS = 1
-CASSANDRA_REQUESTS_PER_TIME_PERIOD = 25
+CASSANDRA_REQUESTS_PER_TIME_PERIOD = 20
 MNEMONIC_REQUESTS_PER_TIME_PERIOD = 30
 CASSANDRA_DELAY = TIME_PERIOD_IN_SECONDS / CASSANDRA_REQUESTS_PER_TIME_PERIOD
 
@@ -68,6 +69,38 @@ Progress: Currently at 1.2, each upsert collection coroutine can be handed off t
 
 # WIP
 @router.get("/nft/populate")
+async def refresh_collections():
+    # Get all existing collections
+    session = CassandraDb.get_db_session()
+    existing = session.execute(
+        """
+        SELECT address FROM collection
+        """
+    )
+    existing_collections = set([collection.address for collection in existing])
+
+    res = await update_collections_ranking()
+    if res["collections"] is None:
+        return "Rankings Update failed"
+
+    new_collections = set(res["collections"]).difference(existing_collections)
+    refresh_jobs = [
+        partial(upsert_collection_data, collection)
+        for collection in existing_collections
+    ]
+
+    for contract_address in new_collections:
+        refresh_jobs.append(
+            partial(
+                upsert_collection_data,
+                contract_address,
+                duration=MnemonicQuery__RecordsDuration.ONE_YEAR,
+            )
+        )
+
+    await run_all(refresh_jobs, max_at_once=1)
+
+
 async def update_collections_ranking():
     out = set()
     delete_rankings.delay()
@@ -81,15 +114,21 @@ async def update_collections_ranking():
             )
             for ranking in top_collections["collections"]:
                 out.add(ranking["collection"]["contractAddress"])
-                create_ranking.apply_async(
-                    (
-                        ranking["collection"]["contractAddress"],
-                        ranking["metricValue"],
-                        MnemonicQuery__RankType[rank]._value_,
-                        MnemonicQuery__RecordsDuration[duration]._value_,
-                    )
+
+            create_rankings.apply_async(
+                (
+                    [
+                        {
+                            "contract_address": rank["collection"]["contractAddress"],
+                            "value": rank["metricValue"],
+                        }
+                        for rank in top_collections["collections"]
+                    ],
+                    MnemonicQuery__RankType[rank]._value_,
+                    MnemonicQuery__RecordsDuration[duration]._value_,
                 )
-                time.sleep(CASSANDRA_DELAY)
+            )
+            time.sleep(CASSANDRA_DELAY)
 
     for rank in GallopRankMetric._member_map_:
         for duration in GallopRankingPeriod._member_map_:
@@ -100,16 +139,22 @@ async def update_collections_ranking():
                 )
             )
             for ranking in top_collections["response"]["leaderboard"]:
-                out.add(ranking['collection_address'])
-                create_ranking.apply_async(
-                    (
-                        ranking["collection_address"],
-                        ranking["value"],
-                        GallopRankMetric[rank]._value_,
-                        GallopRankingPeriod[duration]._value_,
-                    )
+                out.add(ranking["collection_address"])
+
+            create_rankings.apply_async(
+                (
+                    [
+                        {
+                            "contract_address": rank["collection_address"],
+                            "value": rank["value"],
+                        }
+                        for rank in top_collections["response"]["leaderboard"]
+                    ],
+                    GallopRankMetric[rank]._value_,
+                    GallopRankingPeriod[duration]._value_,
                 )
-                time.sleep(CASSANDRA_DELAY)
+            )
+            time.sleep(CASSANDRA_DELAY)
 
     return {
         "count": out.__len__(),
@@ -118,8 +163,8 @@ async def update_collections_ranking():
 
 
 # WIP
-@router.get("/get_collection_data")
-async def get_collection_data(
+@router.get("/upsert_collection_data")
+async def upsert_collection_data(
     contract_address: str,
     duration: MnemonicQuery__RecordsDuration = MnemonicQuery__RecordsDuration.SEVEN_DAYS,
 ):

@@ -1,4 +1,5 @@
 from decimal import Decimal
+import time
 import dotenv
 import os
 from ssl import CERT_NONE, PROTOCOL_TLSv1_2, SSLContext
@@ -9,7 +10,7 @@ from cassandra.cqlengine import connection
 from cassandra.policies import RoundRobinPolicy
 
 from celery.app import Celery
-from .celery_utils import format_timestring
+from .celery_utils import format_timestring, or_else
 
 from etl.fastapi_app.nft.mnemonic.response_types import (
     MnemonicOwnersSeries,
@@ -17,6 +18,9 @@ from etl.fastapi_app.nft.mnemonic.response_types import (
     MnemonicSalesVolumeSeries,
     MnemonicTokensSeries,
 )
+
+CASSANDRA_BATCH_DELAY = 2.5
+BATCH_STEP = 30
 
 
 class CassandraDb:
@@ -51,21 +55,23 @@ class CassandraDb:
 
         # Authenticate and save session for reuse
         db_session = cluster.connect("nf-main-keyspace")
-        db_connection = connection.register_connection("cluster1", session=db_session)
+        # db_connection = connection.register_connection("cluster1", session=db_session)
 
         cls.db_session = db_session
-        cls.db_connection = db_connection
+        # cls.db_connection = db_connection
 
-    @classmethod
-    def get_db_connection(cls, **kwargs):
-        if cls.db_connection is not None:
-            return cls.db_connection
-        CassandraDb.c_init()
-        return cls.db_connection
+    # @classmethod
+    # def get_db_connection(cls, **kwargs):
+    #     if cls.db_connection is not None:
+    #         return cls.db_connection
+    #     CassandraDb.c_init()
+    #     return cls.db_connection
 
     @classmethod
     def get_db_session(cls, **kwargs):
-        connection = CassandraDb.get_db_connection()
+        if cls.db_connection is not None:
+            return cls.db_session
+        CassandraDb.c_init()
         return cls.db_session
 
 
@@ -186,47 +192,80 @@ def create_ranking(
 
 
 @app.task
+def create_rankings(
+    rankings,
+    rank_metric,
+    duration,
+):
+    session = CassandraDb.get_db_session()
+    statements = []
+    for rank in rankings:
+        statements.append(
+            f"""
+            INSERT INTO ranking (rank, duration, collection, value)
+            VALUES ('{rank_metric}', '{duration}', '{rank['contract_address']}', {rank['value']})
+            """
+        )
+
+    errors = []
+    for i in range(0, len(statements), BATCH_STEP):
+        try:
+            session.execute(
+                "BEGIN BATCH\n"
+                + "\n".join(statements[i : i + BATCH_STEP])
+                + "\nAPPLY BATCH"
+            )
+            time.sleep(CASSANDRA_BATCH_DELAY)
+        except Exception as e:
+            errors.append(e.__str__())
+    return {
+        "operation": f"{rank_metric}/{duration}",
+        "status": "success" if not errors else errors,
+    }
+
+
+@app.task
 def delete_rankings():
     session = CassandraDb.get_db_session()
     res = session.execute("TRUNCATE ranking")
-    return res
+    return {"operation": "ranking/delete/all"}
 
 
 @app.task
 def update_prices(contract_address: str, prices: MnemonicPriceSeries):
+    """
+    While this may be vulnerable to CQL injection,
+    it is a temporary workaround to avoid the rate limits imposed by Cosmos.
+    """
     session = CassandraDb.get_db_session()
-    statement = session.prepare(
-        """
-        UPDATE data_point
-           SET min_price = ?,
-               max_price = ?,
-               average_price = ?
-            WHERE collection = ?
-              AND time_stamp = ?
-        """
-    )
-    errors = []
+
+    statement = []
     for point in prices["dataPoints"]:
+        statement.append(
+            f"""
+            UPDATE data_point
+               SET min_price = {or_else(point['min'])},
+                   max_price = {or_else(point['max'])},
+                   average_price = {or_else(point['avg'])}
+            WHERE collection = '{contract_address}'
+            AND time_stamp = '{format_timestring(point['timestamp'])}';
+            """
+        )
+
+    errors = []
+    for i in range(0, len(statement), BATCH_STEP):
         try:
             session.execute(
-                statement,
-                [
-                    Decimal(point["min"]),
-                    Decimal(point["max"]),
-                    Decimal(point["avg"]),
-                    contract_address,
-                    format_timestring(point["timestamp"]),
-                ],
+                "BEGIN BATCH"
+                + "\n".join(statement[i : i + BATCH_STEP])
+                + "\nAPPLY BATCH"
             )
+            time.sleep(CASSANDRA_BATCH_DELAY)
         except Exception as e:
-            errors.append(
-                {
-                    "point": f'price/{contract_address}/{point["timestamp"]}',
-                    "message": e.__str__(),
-                }
-            )
+            errors.append(e.__str__())
+
     return {
-        "operation": f"price/{contract_address}",
+        "operation": f"prices/{contract_address}",
         "status": "success" if not errors else errors,
     }
 
@@ -234,34 +273,31 @@ def update_prices(contract_address: str, prices: MnemonicPriceSeries):
 @app.task
 def update_sales(contract_address: str, sales: MnemonicSalesVolumeSeries):
     session = CassandraDb.get_db_session()
-    statement = session.prepare(
-        """
-        UPDATE data_point
-           SET sales_count = ?,
-               sales_volume = ?
-            WHERE collection = ?
-              AND time_stamp = ?
-        """
-    )
-    errors = []
+
+    statement = []
     for point in sales["dataPoints"]:
+        statement.append(
+            f"""
+            UPDATE data_point
+               SET sales_count = {or_else(point['quantity'])},
+                   sales_volume = {or_else(point['volume'])}
+            WHERE collection = '{contract_address}'
+            AND time_stamp = '{format_timestring(point['timestamp'])}';
+            """
+        )
+
+    errors = []
+    for i in range(0, len(statement), BATCH_STEP):
         try:
             session.execute(
-                statement,
-                [
-                    int(point["quantity"]),
-                    Decimal(point["volume"]),
-                    contract_address,
-                    format_timestring(point["timestamp"]),
-                ],
+                "BEGIN BATCH"
+                + "\n".join(statement[i : i + BATCH_STEP])
+                + "\nAPPLY BATCH"
             )
+            time.sleep(CASSANDRA_BATCH_DELAY)
         except Exception as e:
-            errors.append(
-                {
-                    "point": f'sales/{contract_address}/{point["timestamp"]}',
-                    "message": e.__str__(),
-                }
-            )
+            errors.append(e.__str__())
+
     return {
         "operation": f"sales/{contract_address}",
         "status": "success" if not errors else errors,
@@ -271,38 +307,33 @@ def update_sales(contract_address: str, sales: MnemonicSalesVolumeSeries):
 @app.task
 def update_tokens(contract_address: str, tokens: MnemonicTokensSeries):
     session = CassandraDb.get_db_session()
-    statement = session.prepare(
-        """
-        UPDATE data_point
-           SET tokens_minted = ?,
-               tokens_burned = ?,
-               total_minted = ?,
-               total_burned = ?
-            WHERE collection = ?
-              AND time_stamp = ?
-        """
-    )
-    errors = []
+
+    statement = []
     for point in tokens["dataPoints"]:
+        statement.append(
+            f"""
+            UPDATE data_point
+               SET tokens_minted = {or_else(point['minted'])},
+                   tokens_burned = {or_else(point['burned'])},
+                   total_minted = {or_else(point['totalMinted'])},
+                   total_burned = {or_else(point['totalBurned'])}
+            WHERE collection = '{contract_address}'
+            AND time_stamp = '{format_timestring(point['timestamp'])}';
+            """
+        )
+
+    errors = []
+    for i in range(0, len(statement), BATCH_STEP):
         try:
             session.execute(
-                statement,
-                [
-                    int(point["minted"]),
-                    int(point["burned"]),
-                    int(point["totalMinted"]),
-                    int(point["totalBurned"]),
-                    contract_address,
-                    format_timestring(point["timestamp"]),
-                ],
+                "BEGIN BATCH"
+                + "\n".join(statement[i : i + BATCH_STEP])
+                + "\nAPPLY BATCH"
             )
+            time.sleep(CASSANDRA_BATCH_DELAY)
         except Exception as e:
-            errors.append(
-                {
-                    "point": f'tokens/{contract_address}/{point["timestamp"]}',
-                    "message": e.__str__(),
-                }
-            )
+            errors.append(e.__str__())
+
     return {
         "operation": f"tokens/{contract_address}",
         "status": "success" if not errors else errors,
@@ -312,32 +343,30 @@ def update_tokens(contract_address: str, tokens: MnemonicTokensSeries):
 @app.task
 def update_owners(contract_address: str, owners: MnemonicOwnersSeries):
     session = CassandraDb.get_db_session()
-    statement = session.prepare(
-        """
-        UPDATE data_point
-           SET owners_count = ?
-            WHERE collection = ?
-              AND time_stamp = ?
-        """
-    )
-    errors = []
+
+    statement = []
     for point in owners["dataPoints"]:
+        statement.append(
+            f"""
+            UPDATE data_point
+               SET owners_count = {or_else(point['count'])}
+            WHERE collection = '{contract_address}'
+            AND time_stamp = '{format_timestring(point['timestamp'])}';
+            """
+        )
+
+    errors = []
+    for i in range(0, len(statement), BATCH_STEP):
         try:
             session.execute(
-                statement,
-                [
-                    int(point["count"]),
-                    contract_address,
-                    format_timestring(point["timestamp"]),
-                ],
+                "BEGIN BATCH"
+                + "\n".join(statement[i : i + BATCH_STEP])
+                + "\nAPPLY BATCH"
             )
+            time.sleep(CASSANDRA_BATCH_DELAY)
         except Exception as e:
-            errors.append(
-                {
-                    "point": f'owners/{contract_address}/{point["timestamp"]}',
-                    "message": e.__str__(),
-                }
-            )
+            errors.append(e.__str__())
+
     return {
         "operation": f"owners/{contract_address}",
         "status": "success" if not errors else errors,

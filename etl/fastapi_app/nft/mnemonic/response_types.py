@@ -54,7 +54,7 @@ class MnemonicCollectionsMetaResponse(TypedDict):
     metadata: List[MnemonicResponse__CollectionMeta__MetadataItem]
 
 
-class TimeSeriesPoint(BaseModel):
+class TimeSeriesPoint(TypedDict):
     timestamp: datetime
 
 
