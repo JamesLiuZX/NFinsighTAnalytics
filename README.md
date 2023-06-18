@@ -67,7 +67,7 @@ Here's how to run the demo:
 ```sh
 # Start the containers for the message broker and results backend
 minikube start
-kubernetes apply -f k8s_conf.yaml
+kubectl apply -f k8s_conf.yaml
 minikube tunnel
 ```
 
@@ -89,7 +89,9 @@ python3
 
 You should be able to see the Celery worker handle and execute the task. In the future, we hope to be able to implement the necessary APIs to manage, start and stop tasks.
 
-8. You may also run the script `./scripts/flower.sh` in another terminal to see a GUI to view task running statuses at `localhost:5556`.
+8. You may also run the script `./scripts/flower.sh` in another terminal to see a GUI to view task running statuses at `localhost:5556`. Remember to run the same chmod command on the flower script. Alternatively, you can run 
+`find ./scripts -type f -exec chmod +x {} +` 
+to enable permissions for all current script files within the folder. 
 
 9. To spin down the celery app and related resources, perform these actions in this sequence:
 
