@@ -80,6 +80,7 @@ class MnemonicCollection__OwnerHistory(TimeSeriesPoint):
     count: str
 
 
+# TypedDict does not support generics in Python 3.9
 class MnemonicOwnersSeries(TypedDict):
     dataPoints: List[MnemonicCollection__OwnerHistory]
 
