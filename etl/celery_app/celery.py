@@ -13,6 +13,7 @@ from celery.app import Celery
 class CassandraDb():
     db_session = None
     db_connection = None
+    db_prepared = {}
 
     @classmethod
     def c_init(cls):
@@ -57,7 +58,7 @@ class CassandraDb():
     def get_db_session(cls, **kwargs):
         connection = CassandraDb.get_db_connection()
         return cls.db_session
-    
+
 
 BROKER_URL = "amqp://localhost"
 REDIS_URL = "redis://localhost"
@@ -67,8 +68,61 @@ app = Celery(__name__, broker=BROKER_URL, backend=REDIS_URL)
 
 
 @app.task
-def create_collection(collection):
-    pass
+def upsert_collection(
+        contract_address: str,
+        image: str,
+        banner_image: str,
+        owners: int,
+        tokens: int,
+        name: str = None,
+        description: str = None,
+        external_url: str = None,
+        sales_volume: str = None,
+        type: str = None
+):
+    session = CassandraDb.get_db_session()
+    q = session.prepare(
+        f"""
+        UPDATE collection
+        SET image = ?,
+            banner_image = ?,
+            owners = ?,
+            tokens = ?,
+            name = ?,
+            description = ?,
+            external_url = ?,
+            sales_volume = ?,
+            type = ?
+        WHERE address = ?
+        """
+    )
+
+    try:
+        session.execute(
+            q,
+            [
+                image,
+                banner_image,
+                int(owners),
+                int(tokens),
+                name,
+                description,
+                external_url,
+                Decimal(sales_volume),
+                type,
+                contract_address
+            ]
+        )
+        return {
+            'operation': f'collection/upsert/{contract_address}',
+            'status': 'success'
+        }
+    except Exception as e:
+        return {
+            'operation': f'collection/upsert/{contract_address}',
+            'status': 'failed',
+            'message': e.__str__()
+        }
 
 
 @app.task
@@ -110,7 +164,7 @@ def create_ranking(contract_address: str, metric_value: str, rank_type: str, ran
         """
     )
     try:
-        res = session.execute(statement, [
+        session.execute(statement, [
             rank_type,
             rank_duration,
             contract_address,
@@ -118,7 +172,7 @@ def create_ranking(contract_address: str, metric_value: str, rank_type: str, ran
         ])
         return {
             'operation': f'rank/{rank_type}/{rank_duration}/{contract_address}',
-            'status': 'passed',
+            'status': 'success',
         }
     except Exception as e: 
         return {

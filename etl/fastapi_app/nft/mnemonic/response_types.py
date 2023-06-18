@@ -43,7 +43,7 @@ class MnemonicResponse__CollectionMeta__Metadata__Type(Enum):
     WIKI_USN        = "TYPE_WIKI_URL"
 
 
-class MnemonicResponse__CollectionMeta__MetadataItem(BaseModel):
+class MnemonicResponse__CollectionMeta__MetadataItem(TypedDict):
     type: MnemonicResponse__CollectionMeta__Metadata__Type
     value: str
 
@@ -59,6 +59,7 @@ class MnemonicCollectionsMetaResponse(TypedDict):
 
 class TimeSeriesPoint(BaseModel):
     timestamp: datetime
+
 
 class MnemonicCollection__PriceHistory(TimeSeriesPoint):
     min: str
