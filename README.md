@@ -18,7 +18,7 @@ To run, simply follow these steps:
 python -m pip install -r requirements.txt
 
 # Add execute permissions for the script
-chmod +x ./scripts/api.sh`
+chmod +x ./scripts/api.sh
 
 # Run the app
 ./scripts/api.sh # OR uvicorn fastapi_app.main:app --reload
