@@ -1,11 +1,8 @@
 from enum import Enum
 from pydantic import BaseModel
-from pydantic.generics import GenericModel
-from typing import Generic, List, TypeVar, TypedDict
+from typing import List, TypedDict
 from datetime import datetime
 
-
-DataT = TypeVar('DataT')
 
 class MnemonicTopCollections__Collection__CollectionObject(BaseModel):
     contractAddress: str
@@ -22,25 +19,25 @@ class MnemonicTopCollectionsResponse(TypedDict):
 
 
 class MnemonicResponse__CollectionType(Enum):
-    UNKNOWN         = "TOKEN_TYPE_UNKNOWN"
-    ERC20           = "TOKEN_TYPE_ERC20"
-    ERC721          = "TOKEN_TYPE_ERC721"
-    ERC1155         = "TOKEN_TYPE_ERC1155"
-    ERC721_LEGACY   = "TOKEN_TYPE_ERC721_LEGACY"
-    CRYPTOPUNKS     = "TOKEN_TYPE_CRYPTOPUNKS"
+    UNKNOWN = "TOKEN_TYPE_UNKNOWN"
+    ERC20 = "TOKEN_TYPE_ERC20"
+    ERC721 = "TOKEN_TYPE_ERC721"
+    ERC1155 = "TOKEN_TYPE_ERC1155"
+    ERC721_LEGACY = "TOKEN_TYPE_ERC721_LEGACY"
+    CRYPTOPUNKS = "TOKEN_TYPE_CRYPTOPUNKS"
 
 
 class MnemonicResponse__CollectionMeta__Metadata__Type(Enum):
-    BANNER_IMAGE    = "TYPE_BANNER_IMAGE_URL"
-    DESCRIPTION     = "TYPE_DESCRIPTION"
-    IMAGE           = "TYPE_IMAGE_URL"
-    DISCORD         = "TYPE_DISCORD_URL"
-    EXT_URL         = "TYPE_EXTERNAL_URL"
-    MEDIUM_USN      = "TYPE_MEDIUM_USERNAME"
-    TELE_USN        = "TYPE_TELEGRAM_URL"
-    TWITTER_USN     = "TYPE_TWITTER_USERNAME"
-    INSTA_USN       = "TYPE_INSTAGRAM_USERNAME"
-    WIKI_USN        = "TYPE_WIKI_URL"
+    BANNER_IMAGE = "TYPE_BANNER_IMAGE_URL"
+    DESCRIPTION = "TYPE_DESCRIPTION"
+    IMAGE = "TYPE_IMAGE_URL"
+    DISCORD = "TYPE_DISCORD_URL"
+    EXT_URL = "TYPE_EXTERNAL_URL"
+    MEDIUM_USN = "TYPE_MEDIUM_USERNAME"
+    TELE_USN = "TYPE_TELEGRAM_URL"
+    TWITTER_USN = "TYPE_TWITTER_USERNAME"
+    INSTA_USN = "TYPE_INSTAGRAM_USERNAME"
+    WIKI_USN = "TYPE_WIKI_URL"
 
 
 class MnemonicResponse__CollectionMeta__MetadataItem(TypedDict):
@@ -83,7 +80,17 @@ class MnemonicCollection__OwnerHistory(TimeSeriesPoint):
     count: str
 
 
-class MnemonicCollectionHistoryResponse(GenericModel, Generic[DataT]):
-    dataPoints: List[DataT]
+class MnemonicOwnersSeries(TypedDict):
+    dataPoints: List[MnemonicCollection__OwnerHistory]
 
 
+class MnemonicPriceSeries(TypedDict):
+    dataPoints: List[MnemonicCollection__PriceHistory]
+
+
+class MnemonicSalesVolumeSeries(TypedDict):
+    dataPoints: List[MnemonicCollection__SalesHistory]
+
+
+class MnemonicTokensSeries(TypedDict):
+    dataPoints: List[MnemonicCollection__TokenHistory]

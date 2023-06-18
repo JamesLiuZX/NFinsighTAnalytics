@@ -10,7 +10,8 @@ from cassandra.policies import RoundRobinPolicy
 
 from celery.app import Celery
 
-class CassandraDb():
+
+class CassandraDb:
     db_session = None
     db_connection = None
     db_prepared = {}
@@ -69,16 +70,16 @@ app = Celery(__name__, broker=BROKER_URL, backend=REDIS_URL)
 
 @app.task
 def upsert_collection(
-        contract_address: str,
-        image: str,
-        banner_image: str,
-        owners: int,
-        tokens: int,
-        name: str = None,
-        description: str = None,
-        external_url: str = None,
-        sales_volume: str = None,
-        type: str = None
+    contract_address: str,
+    image: str,
+    banner_image: str,
+    owners: int,
+    tokens: int,
+    name: str = None,
+    description: str = None,
+    external_url: str = None,
+    sales_volume: str = None,
+    type: str = None,
 ):
     session = CassandraDb.get_db_session()
     q = session.prepare(
@@ -110,18 +111,18 @@ def upsert_collection(
                 external_url,
                 Decimal(sales_volume),
                 type,
-                contract_address
-            ]
+                contract_address,
+            ],
         )
         return {
-            'operation': f'collection/upsert/{contract_address}',
-            'status': 'success'
+            "operation": f"collection/upsert/{contract_address}",
+            "status": "success",
         }
     except Exception as e:
         return {
-            'operation': f'collection/upsert/{contract_address}',
-            'status': 'failed',
-            'message': e.__str__()
+            "operation": f"collection/upsert/{contract_address}",
+            "status": "failed",
+            "message": e.__str__(),
         }
 
 
@@ -146,7 +147,7 @@ def get_rankings():
         #   'value': Decimal()
         # }
         pass
-    
+
 
 @app.task
 def upsert_collections(collections):
@@ -154,9 +155,11 @@ def upsert_collections(collections):
 
 
 @app.task
-def create_ranking(contract_address: str, metric_value: str, rank_type: str, rank_duration: str):
+def create_ranking(
+    contract_address: str, metric_value: str, rank_type: str, rank_duration: str
+):
     session = CassandraDb.get_db_session()
-    
+
     statement = session.prepare(
         """
         INSERT INTO ranking (rank, duration, collection, value)
@@ -164,22 +167,20 @@ def create_ranking(contract_address: str, metric_value: str, rank_type: str, ran
         """
     )
     try:
-        session.execute(statement, [
-            rank_type,
-            rank_duration,
-            contract_address,
-            Decimal(value=metric_value)
-        ])
+        session.execute(
+            statement,
+            [rank_type, rank_duration, contract_address, Decimal(value=metric_value)],
+        )
         return {
-            'operation': f'rank/{rank_type}/{rank_duration}/{contract_address}',
-            'status': 'success',
+            "operation": f"rank/{rank_type}/{rank_duration}/{contract_address}",
+            "status": "success",
         }
-    except Exception as e: 
+    except Exception as e:
         return {
-            'operation': f'rank/{rank_type}/{rank_duration}/{contract_address}',
-            'status': 'failed',
+            "operation": f"rank/{rank_type}/{rank_duration}/{contract_address}",
+            "status": "failed",
         }
-    
+
 
 @app.task
 def delete_rankings():
@@ -196,4 +197,3 @@ def upsert_datapoint(datapoint):
 @app.task
 def upsert_datapoints(datapoints):
     pass
-

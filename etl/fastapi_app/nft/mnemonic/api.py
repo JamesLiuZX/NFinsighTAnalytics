@@ -13,12 +13,11 @@ from .mnemonic_types import (
 )
 from .response_types import (
     MnemonicCollectionsMetaResponse,
+    MnemonicOwnersSeries,
+    MnemonicPriceSeries,
+    MnemonicSalesVolumeSeries,
+    MnemonicTokensSeries,
     MnemonicTopCollectionsResponse,
-    MnemonicCollectionHistoryResponse,
-    MnemonicCollection__PriceHistory,
-    MnemonicCollection__OwnerHistory,
-    MnemonicCollection__SalesHistory,
-    MnemonicCollection__TokenHistory
 )
 
 client = AsyncClient()
@@ -63,7 +62,7 @@ async def get_collection_price_history(
     time_period: MnemonicQuery__RecordsDuration,
     group_by: MnemonicQuery__DataTimeGroup = MnemonicQuery__DataTimeGroup.ONE_DAY,
     time_stamp_lt: datetime = datetime.now(tz=timezone.utc),
-) -> MnemonicCollectionHistoryResponse[MnemonicCollection__PriceHistory]:
+) -> MnemonicPriceSeries:
     url = f"https://ethereum-rest.api.mnemonichq.com/collections/v1beta2/{contract_address}/prices/{time_period.value}/{group_by.value}"
     params = {"timestampLt": time_stamp_lt.strftime("%Y-%M-%dT%H:%M:%SZ")}
     header = get_header()
@@ -78,7 +77,7 @@ async def get_collection_sales_volume(
     time_period: MnemonicQuery__RecordsDuration,
     group_by: MnemonicQuery__DataTimeGroup = MnemonicQuery__DataTimeGroup.ONE_DAY,
     time_stamp_lt: datetime = datetime.now(tz=timezone.utc),
-) -> MnemonicCollectionHistoryResponse[MnemonicCollection__SalesHistory]:
+) -> MnemonicOwnersSeries:
     url = f"https://ethereum-rest.api.mnemonichq.com/collections/v1beta2/{contract_address}/sales_volume/{time_period.value}/{group_by.value}"
     params = {"timestampLt": time_stamp_lt.strftime("%Y-%M-%dT%H:%M:%SZ")}
     header = get_header()
@@ -93,7 +92,7 @@ async def get_collection_token_supply(
     time_period: MnemonicQuery__RecordsDuration,
     group_by: MnemonicQuery__DataTimeGroup = MnemonicQuery__DataTimeGroup.ONE_DAY,
     time_stamp_lt: datetime = datetime.now(tz=timezone.utc),
-) -> MnemonicCollectionHistoryResponse[MnemonicCollection__TokenHistory]:
+) -> MnemonicTokensSeries:
     url = f"https://ethereum-rest.api.mnemonichq.com/collections/v1beta2/{contract_address}/supply/{time_period.value}/{group_by.value}"
     params = {"timestampLt": time_stamp_lt.strftime("%Y-%M-%dT%H:%M:%SZ")}
     header = get_header()
@@ -108,7 +107,7 @@ async def get_collection_owners_count(
     time_period: MnemonicQuery__RecordsDuration,
     group_by: MnemonicQuery__DataTimeGroup = MnemonicQuery__DataTimeGroup.ONE_DAY,
     time_stamp_lt: datetime = datetime.now(tz=timezone.utc),
-) -> MnemonicCollectionHistoryResponse[MnemonicCollection__OwnerHistory]:
+) -> MnemonicSalesVolumeSeries:
     url = f"https://ethereum-rest.api.mnemonichq.com/collections/v1beta2/{contract_address}/owners_count/{time_period.value}/{group_by.value}"
     params = {"timestampLt": time_stamp_lt.strftime("%Y-%M-%dT%H:%M:%SZ")}
     header = get_header()
@@ -116,5 +115,3 @@ async def get_collection_owners_count(
 
     # assert response.status_code == 200
     return response.json()
-
-

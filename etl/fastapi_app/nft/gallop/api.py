@@ -15,30 +15,24 @@ router = APIRouter()
 @lru_cache(maxsize=1)
 def get_header():
     return {
-        'accept': 'application/json',
-        'content-type': 'application/json',
-        'x-api-key': os.environ['GALLOP_API_KEY']
+        "accept": "application/json",
+        "content-type": "application/json",
+        "x-api-key": os.environ["GALLOP_API_KEY"],
     }
 
 
 @router.get("/top_collections", response_model=GallopTopCollectionResponse)
 async def get_top_collections(
-        rank: GallopRankMetric,
-        rank_duration: GallopRankingPeriod,
-        num_records: int = 100
+    rank: GallopRankMetric, rank_duration: GallopRankingPeriod, num_records: int = 100
 ) -> GallopTopCollectionResponse:
     payload = {
         "interval": rank_duration.value,
         "ranking_metric": rank.value,
-        "page_size": num_records
+        "page_size": num_records,
     }
-    url = 'https://api.prod.gallop.run/v1/analytics/eth/getLeaderBoard'
+    url = "https://api.prod.gallop.run/v1/analytics/eth/getLeaderBoard"
     header = get_header()
-    response = await client.post(
-        url,
-        json=payload,
-        headers=header
-    )
+    response = await client.post(url, json=payload, headers=header)
 
     assert response.status_code == 200
     return response.json()
@@ -48,9 +42,7 @@ async def get_top_collections(
 async def floor_price(collection_addresses: List[str]) -> GallopFloorResponse:
     assert len(collection_addresses) > 0
     url = "https://api.prod.gallop.run/v1/data/eth/getMarketplaceFloorPrice"
-    payload = {
-        "collection_address": collection_addresses
-    }
+    payload = {"collection_address": collection_addresses}
     header = get_header()
 
     response = await client.post(url, headers=header, json=payload)
