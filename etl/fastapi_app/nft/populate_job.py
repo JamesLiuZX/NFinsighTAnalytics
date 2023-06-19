@@ -71,7 +71,7 @@ server downtime
 
 
 # WIP
-@router.get("/nft/populate")
+@router.get("/nft/refresh")
 async def refresh_collections():
     # Get all existing collections
     session = CassandraDb.get_db_session()
@@ -103,6 +103,27 @@ async def refresh_collections():
 
     await run_all(refresh_jobs, max_at_once=1)
     await get_set_floor()
+
+
+@router.get("/nft/populate_data")
+async def populate_data():
+    session = CassandraDb.get_db_session()
+    existing = session.execute(
+        """
+        SELECT address FROM collection
+        """
+    )
+    existing_collections = list([collection.address for collection in existing])
+    jobs = [
+        partial(
+            upsert_collection_data,
+            collection,
+            duration=MnemonicQuery__RecordsDuration.ONE_YEAR,
+            populate_data=True,
+        )
+        for collection in existing_collections
+    ]
+    await run_all(jobs, max_at_once=1, max_per_second=0.3)
 
 
 @router.get("/collections/get")
@@ -182,31 +203,33 @@ async def update_collections_ranking():
 async def upsert_collection_data(
     contract_address: str,
     duration: MnemonicQuery__RecordsDuration = MnemonicQuery__RecordsDuration.SEVEN_DAYS,
+    populate_data=False,
 ):
     jobs = [
         partial(get_collection_meta, contract_address),  # [0] - Meta
         partial(
             get_collection_price_history, contract_address, duration
-        ),  # [1] - Price History
+        ),  # [0] - Price History
         partial(
             get_collection_sales_volume, contract_address, duration
-        ),  # [2] - Sales Volume
+        ),  # [1] - Sales Volume
         partial(
             get_collection_token_supply, contract_address, duration
-        ),  # [3] - Token Supply
+        ),  # [2] - Token Supply
         partial(
             get_collection_owners_count, contract_address, duration
-        ),  # [4] - Owners Count
+        ),  # [3] - Owners Count
     ]
     results = await run_all(jobs, max_per_second=MNEMONIC_REQUESTS_PER_TIME_PERIOD)
 
     metadata, prices, sales, tokens, owners = results
     await populate_collection_meta(contract_address, metadata)
 
-    # update_prices.apply_async(args=(contract_address, prices))
-    # update_sales.apply_async(args=(contract_address, sales))
-    # update_tokens.apply_async(args=(contract_address, tokens))
-    # update_owners.apply_async(args=(contract_address, owners))
+    if populate_data:
+        update_prices.apply_async(args=(contract_address, prices))
+        update_sales.apply_async(args=(contract_address, sales))
+        update_tokens.apply_async(args=(contract_address, tokens))
+        update_owners.apply_async(args=(contract_address, owners))
 
     return results
 
@@ -255,6 +278,7 @@ async def populate_collection_meta(
         },
     )
 
+
 @router.get("/floor_price/set")
 async def get_set_floor():
     GALLOP_STEP_SIZE = 10
@@ -268,6 +292,4 @@ async def get_set_floor():
             continue
 
         floor_prices = gallop_response["response"]["collections"]
-        update_floor.apply_async(kwargs=({
-            "floor_prices": floor_prices
-        }))
+        update_floor.apply_async(kwargs=({"floor_prices": floor_prices}))
