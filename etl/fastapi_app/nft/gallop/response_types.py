@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from .gallop_types import GallopRankingPeriod, GallopRankMetric
 
 
-class Floor__MarketPlaceEntry(BaseModel):
+class Floor__MarketPlaceEntry(TypedDict):
     updated_at: str  # DateTime string
     floor_price: Union[float, None]
     marketplace: str
@@ -15,12 +15,12 @@ class Floor__MarketPlaceEntry(BaseModel):
     sub_collection_tag: str
 
 
-class Floor__Collections(BaseModel):
+class Floor__Collections(TypedDict):
     collection_address: str
     marketplaces: List[Floor__MarketPlaceEntry]
 
 
-class Floor__Response(BaseModel):
+class Floor__Response(TypedDict):
     total_items: int
     total_pages: int
     page: int

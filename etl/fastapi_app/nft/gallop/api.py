@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from httpx import AsyncClient
 
 from .gallop_types import GallopRankingPeriod, GallopRankMetric
-from .response_types import GallopFloorResponse, GallopTopCollectionResponse
+from .response_types import GallopTopCollectionResponse
 
 client = AsyncClient()
 router = APIRouter()
@@ -38,8 +38,8 @@ async def get_top_collections_gallop(
     return response.json()
 
 
-@router.post("/floor_price", response_model=GallopFloorResponse)
-async def floor_price(collection_addresses: List[str]) -> GallopFloorResponse:
+@router.post("/floor_price")
+async def floor_price(collection_addresses: List[str]):
     assert len(collection_addresses) > 0
     url = "https://api.prod.gallop.run/v1/data/eth/getMarketplaceFloorPrice"
     payload = {"collection_address": collection_addresses}
@@ -47,5 +47,5 @@ async def floor_price(collection_addresses: List[str]) -> GallopFloorResponse:
 
     response = await client.post(url, headers=header, json=payload)
 
-    assert response.status_code == 200
+    # assert response.status_code == 200
     return response.json()

@@ -6,11 +6,13 @@ from ssl import CERT_NONE, PROTOCOL_TLSv1_2, SSLContext
 
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
-from cassandra.cqlengine import connection
+
+# from cassandra.cqlengine import connection
 from cassandra.policies import RoundRobinPolicy
 
 from celery.app import Celery
-from .celery_utils import format_timestring, or_else
+from celery.signals import worker_process_init
+from .celery_utils import format_gallop_timestamp, format_timestring, or_else
 
 from etl.fastapi_app.nft.mnemonic.response_types import (
     MnemonicOwnersSeries,
@@ -19,7 +21,7 @@ from etl.fastapi_app.nft.mnemonic.response_types import (
     MnemonicTokensSeries,
 )
 
-CASSANDRA_BATCH_DELAY = 2.5
+CASSANDRA_BATCH_DELAY = 0.3
 BATCH_STEP = 30
 
 
@@ -29,7 +31,7 @@ class CassandraDb:
     db_prepared = {}
 
     @classmethod
-    def c_init(cls):
+    def c_init(cls, **kwargs):
         """
         Maintain a singleton connection. May be converted to a connection pool in the future.
         """
@@ -69,7 +71,7 @@ class CassandraDb:
 
     @classmethod
     def get_db_session(cls, **kwargs):
-        if cls.db_connection is not None:
+        if cls.db_session is not None:
             return cls.db_session
         CassandraDb.c_init()
         return cls.db_session
@@ -79,6 +81,7 @@ BROKER_URL = "amqp://localhost"
 REDIS_URL = "redis://localhost"
 
 
+worker_process_init.connect(CassandraDb.c_init)
 app = Celery(__name__, broker=BROKER_URL, backend=REDIS_URL)
 
 
@@ -371,3 +374,51 @@ def update_owners(contract_address: str, owners: MnemonicOwnersSeries):
         "operation": f"owners/{contract_address}",
         "status": "success" if not errors else errors,
     }
+
+
+@app.task
+def update_floor(floor_prices=[]):
+    session = CassandraDb.get_db_session()
+    statement = []
+    for floor_price_listing in floor_prices:
+        contract_address = floor_price_listing["collection_address"]
+
+        latest_updated_at = format_gallop_timestamp(
+            floor_price_listing["marketplaces"][0]["updated_at"],
+        )
+        min_floor = or_else(
+            floor_price_listing["marketplaces"][0]["floor_price"], default_value=0
+        )
+        for i in range(1, len(floor_price_listing["marketplaces"])):
+            new_listing = floor_price_listing["marketplaces"][i]
+            new_timestamp = format_gallop_timestamp(
+                new_listing["updated_at"],
+            )
+            new_floor = or_else(new_listing["floor_price"], default_value=0)
+            if not new_floor:
+                pass
+            elif (new_timestamp > latest_updated_at) or (new_floor and not min_floor):
+                min_floor = new_floor
+
+        statement.append(
+            f"""
+            UPDATE collection
+               SET floor = {min_floor}
+            WHERE address = '{contract_address}';
+            """
+        )
+
+    try:
+        session.execute(
+            "BEGIN UNLOGGED BATCH\n" + "\n".join(statement) + "\nAPPLY BATCH"
+        )
+        return {
+            "operation": f"floor/10\n[{'|'.join([fpl['collection_address'] for fpl in floor_prices])}]",
+            "status": "success",
+        }
+    except Exception as e:
+        return {
+            "operation": f"floor/10\n[{'|'.join([fpl['collection_address'] for fpl in floor_prices])}]",
+            "status": "failed",
+            "message": e.__str__(),
+        }

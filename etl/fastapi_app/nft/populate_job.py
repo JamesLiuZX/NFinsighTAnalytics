@@ -3,7 +3,7 @@ from functools import partial
 from fastapi import APIRouter
 import time
 
-from .gallop.api import get_top_collections_gallop
+from .gallop.api import floor_price, get_top_collections_gallop
 
 from .gallop.gallop_types import (
     GallopRankMetric,
@@ -33,6 +33,7 @@ from .mnemonic.response_types import (
 )
 
 from etl.celery_app.celery import (
+    update_floor,
     update_owners,
     update_prices,
     update_sales,
@@ -60,10 +61,12 @@ Pre: Get set of all collections in DB
 2) Get all collections
     2.1) Fire off batched queries to Gallop to query floor price
     2.2) Batch update all floor prices 
+3) Insert or update data points
+    3.1) Insert 365 for new collections
+    3.2) Refresh last two days for existing ones
 
-Progress: Currently at 1.2, each upsert collection coroutine can be handed off to a background worker
-- get_data operation done
-- Now, need to optimise an upsert_data operation to act on the returned data.
+Progress: Currently at 3, working on reducing throughput needed for this operation or handing off to another worker during
+server downtime
 """
 
 
@@ -94,11 +97,23 @@ async def refresh_collections():
             partial(
                 upsert_collection_data,
                 contract_address,
-                duration=MnemonicQuery__RecordsDuration.ONE_YEAR,
+                # duration=MnemonicQuery__RecordsDuration.ONE_YEAR, # needed for new collections datapoints
             )
         )
 
     await run_all(refresh_jobs, max_at_once=1)
+    await get_set_floor()
+
+
+@router.get("/collections/get")
+def get_collections():
+    session = CassandraDb.get_db_session()
+    res = session.execute(
+        """
+        SELECT address FROM collection
+        """
+    )
+    return [c.address for c in res]
 
 
 async def update_collections_ranking():
@@ -188,10 +203,10 @@ async def upsert_collection_data(
     metadata, prices, sales, tokens, owners = results
     await populate_collection_meta(contract_address, metadata)
 
-    update_prices.apply_async(args=(contract_address, prices))
-    update_sales.apply_async(args=(contract_address, sales))
-    update_tokens.apply_async(args=(contract_address, tokens))
-    update_owners.apply_async(args=(contract_address, owners))
+    # update_prices.apply_async(args=(contract_address, prices))
+    # update_sales.apply_async(args=(contract_address, sales))
+    # update_tokens.apply_async(args=(contract_address, tokens))
+    # update_owners.apply_async(args=(contract_address, owners))
 
     return results
 
@@ -239,3 +254,20 @@ async def populate_collection_meta(
             "type": ",".join(list(meta_response["types"])),
         },
     )
+
+@router.get("/floor_price/set")
+async def get_set_floor():
+    GALLOP_STEP_SIZE = 10
+    session = CassandraDb.get_db_session()
+    db_collections = session.execute("SELECT address FROM collection")
+    collections = [c.address for c in db_collections]
+    for i in range(0, len(collections), GALLOP_STEP_SIZE):
+        gallop_response = await floor_price(collections[i : i + GALLOP_STEP_SIZE])
+        if gallop_response["response"] is None:
+            print(gallop_response["title"], gallop_response["detail"])
+            continue
+
+        floor_prices = gallop_response["response"]["collections"]
+        update_floor.apply_async(kwargs=({
+            "floor_prices": floor_prices
+        }))
