@@ -1,19 +1,11 @@
 from decimal import Decimal
-import time
-import dotenv
-import os
-from ssl import CERT_NONE, PROTOCOL_TLSv1_2, SSLContext
-
-from cassandra.auth import PlainTextAuthProvider
-from cassandra.cluster import Cluster
-
-# from cassandra.cqlengine import connection
-from cassandra.policies import RoundRobinPolicy
 
 from celery.app import Celery
 from celery.signals import worker_process_init
+
 from .celery_utils import format_gallop_timestamp, format_timestring, or_else
 
+from etl.database import CassandraDb
 from etl.fastapi_app.nft.mnemonic.response_types import (
     MnemonicOwnersSeries,
     MnemonicPriceSeries,
@@ -21,61 +13,7 @@ from etl.fastapi_app.nft.mnemonic.response_types import (
     MnemonicTokensSeries,
 )
 
-CASSANDRA_BATCH_DELAY = 0.3
 BATCH_STEP = 30
-
-
-class CassandraDb:
-    db_session = None
-    db_connection = None
-    db_prepared = {}
-
-    @classmethod
-    def c_init(cls, **kwargs):
-        """
-        Maintain a singleton connection. May be converted to a connection pool in the future.
-        """
-
-        DOTENV_PATH = os.getcwd() + "/etl/celery_app/.env"
-        dotenv.load_dotenv(DOTENV_PATH)
-
-        ssl_context = SSLContext(PROTOCOL_TLSv1_2)
-        ssl_context.verify_mode = CERT_NONE
-        auth_provider = PlainTextAuthProvider(
-            username=os.environ["DATABASE_USERNAME"],
-            password=os.environ["DATABASE_PASSWORD"],
-        )
-
-        cluster = Cluster(
-            [os.environ["DATABASE_CONTACT_POINT"]],
-            port=int(os.environ["DATABASE_PORT"]),
-            auth_provider=auth_provider,
-            ssl_context=ssl_context,
-            load_balancing_policy=RoundRobinPolicy(),
-            protocol_version=4,
-        )
-
-        # Authenticate and save session for reuse
-        db_session = cluster.connect("nf-main-keyspace")
-        # db_connection = connection.register_connection("cluster1", session=db_session)
-
-        cls.db_session = db_session
-        # cls.db_connection = db_connection
-
-    # @classmethod
-    # def get_db_connection(cls, **kwargs):
-    #     if cls.db_connection is not None:
-    #         return cls.db_connection
-    #     CassandraDb.c_init()
-    #     return cls.db_connection
-
-    @classmethod
-    def get_db_session(cls, **kwargs):
-        if cls.db_session is not None:
-            return cls.db_session
-        CassandraDb.c_init()
-        return cls.db_session
-
 
 BROKER_URL = "amqp://localhost"
 REDIS_URL = "redis://localhost"
@@ -158,7 +96,7 @@ def get_rankings():
 
     for row in res:
         # row: {
-        #   'collection' : '',
+        #   'collection' : '', # row.collection
         #   'duration': '',
         #   'rank': '',
         #   'value': Decimal()
@@ -191,6 +129,7 @@ def create_ranking(
         return {
             "operation": f"rank/{rank_type}/{rank_duration}/{contract_address}",
             "status": "failed",
+            "message": e.__str__(),
         }
 
 
@@ -218,7 +157,7 @@ def create_rankings(
                 + "\n".join(statements[i : i + BATCH_STEP])
                 + "\nAPPLY BATCH"
             )
-            time.sleep(CASSANDRA_BATCH_DELAY)
+            # time.sleep(CASSANDRA_BATCH_DELAY)
         except Exception as e:
             errors.append(e.__str__())
     return {
@@ -230,15 +169,23 @@ def create_rankings(
 @app.task
 def delete_rankings():
     session = CassandraDb.get_db_session()
-    res = session.execute("TRUNCATE ranking")
-    return {"operation": "ranking/delete/all"}
+    error = ""
+    try:
+        res = session.execute("TRUNCATE ranking")
+    except Exception as e:
+        error = e.__str__()
+
+    return {
+        "operation": "ranking/delete/all",
+        "status": "success" if not error else error,
+    }
 
 
 @app.task
 def update_prices(contract_address: str, prices: MnemonicPriceSeries):
     """
     While this may be vulnerable to CQL injection,
-    it is a temporary workaround to avoid the rate limits imposed by Cosmos.
+    it is a temporary workaround to avoid the rate limits on the database.
     """
     session = CassandraDb.get_db_session()
 
@@ -263,7 +210,7 @@ def update_prices(contract_address: str, prices: MnemonicPriceSeries):
                 + "\n".join(statement[i : i + BATCH_STEP])
                 + "\nAPPLY BATCH"
             )
-            time.sleep(CASSANDRA_BATCH_DELAY)
+            # time.sleep(CASSANDRA_BATCH_DELAY) # Time delay for Cosmo
         except Exception as e:
             errors.append(e.__str__())
 
@@ -297,7 +244,7 @@ def update_sales(contract_address: str, sales: MnemonicSalesVolumeSeries):
                 + "\n".join(statement[i : i + BATCH_STEP])
                 + "\nAPPLY BATCH"
             )
-            time.sleep(CASSANDRA_BATCH_DELAY)
+            # time.sleep(CASSANDRA_BATCH_DELAY) # Time delay for Cosmo
         except Exception as e:
             errors.append(e.__str__())
 
@@ -333,7 +280,7 @@ def update_tokens(contract_address: str, tokens: MnemonicTokensSeries):
                 + "\n".join(statement[i : i + BATCH_STEP])
                 + "\nAPPLY BATCH"
             )
-            time.sleep(CASSANDRA_BATCH_DELAY)
+            # time.sleep(CASSANDRA_BATCH_DELAY) # Time delay for Cosmo
         except Exception as e:
             errors.append(e.__str__())
 
@@ -366,7 +313,7 @@ def update_owners(contract_address: str, owners: MnemonicOwnersSeries):
                 + "\n".join(statement[i : i + BATCH_STEP])
                 + "\nAPPLY BATCH"
             )
-            time.sleep(CASSANDRA_BATCH_DELAY)
+            # time.sleep(CASSANDRA_BATCH_DELAY) # Time delay for Cosmo
         except Exception as e:
             errors.append(e.__str__())
 

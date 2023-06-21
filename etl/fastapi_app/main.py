@@ -26,5 +26,5 @@ async def read_env_values():
 
 # Connect to database, init env values
 @app.on_event("startup")
-async def connect_db():
+async def api_init():
     await read_env_values()

@@ -36,7 +36,7 @@ async def get_collection_meta(contract_address: str) -> MnemonicCollectionsMetaR
     header = get_header()
     response = await client.get(url=url, headers=header)
 
-    assert response.status_code == 200, f'meta/{contract_address}'
+    assert response.status_code == 200, f"meta/{contract_address}"
     return response.json()
 
 
