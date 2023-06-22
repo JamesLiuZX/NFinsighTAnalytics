@@ -99,8 +99,8 @@ The tunnel mirrors the load balancing services so that the ports are natively ac
 # Start a REPL environment for testing
 python3
 
->> from celery_app.celery import create_collection
->> create_collection.delay("your_name")
+>> from celery_app.celery import {INSERT_task_name}
+>> {task_name}.delay(*args, **kwargs)
 ```
 
 You should be able to see the Celery worker handle and execute the task. In the future, we hope to be able to implement the necessary APIs to manage, start and stop tasks.
