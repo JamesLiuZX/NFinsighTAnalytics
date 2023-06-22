@@ -32,19 +32,35 @@ Developed by @SeeuSim and @JamesLiuZX
 
 The Python ORM by DataStax has some flaws. Hence, we execute our queries using only its raw CQL execution engine.
 
-To connect to the database, run the following in your terminal, using Docker:
+To connect to the database, create a [Datastax Astra](https://www.datastax.com/products/datastax-astra) account and database, and use either their web CQL shell or execute
+raw queries with its various drivers.
 
-```sh
-docker run -it --rm -e SSL_VALIDATE=false -e SSL_VERSION=TLSv1_2 cassandra:3.11 cqlsh \
-  <database_account_name>.cassandra.cosmos.azure.com 10350 \
-  -u <database_user> \
-  -p <database_password> \
-  -k <database_keyspace_name> --ssl
-```
-
-Thereafter, you should be able to test and execute queries using [`CQL`](https://cassandra.apache.org/doc/latest/cassandra/cql/index.html).
+Within the web shell, you should be able to test and execute queries using [`CQL`](https://cassandra.apache.org/doc/latest/cassandra/cql/index.html).
 
 Once your queries have been validated, use `session.prepare` and `session.execute` in your Python code to execute database statements.
+
+### Set up on local
+
+To set up, simply download your `secure-connect-{database_name}` bundle and populate it in the `etl` folder.
+Reference that in the `etl/database.py` file by setting the variables in a `etl/.env` file:
+
+```sh
+ASTRA_DB_NAME="<value>"
+ASTRA_CLIENT_ID="<value>"
+ASTRA_CLIENT_SECRET="<value>"
+ASTRA_TOKEN="<value>"
+
+ASTRA_KEYSPACE="<keyspace>"
+```
+
+These values can be obtained from your Astra DB web console.
+
+### CQL Injection
+
+Within our code, there are multiple CQL injection vulnerabilities with raw f-string queries. However, as we are not storing sensitive data
+within the database and are optimising our queries for batch performance, we will leave them as such for now.
+
+Fixes proposed are welcome, via our [issues](https://github.com/SeeuSim/NFinsighTAnalytics/issues) section.
 
 ## Celery Demo
 
