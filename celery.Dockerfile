@@ -33,6 +33,4 @@ COPY ./scripts/celery.sh .
 
 WORKDIR /app
 
-RUN ls
-
 ENTRYPOINT celery -A etl.celery_app.celery worker -P gevent -c 3 --loglevel=info

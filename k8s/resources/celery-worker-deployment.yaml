@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-worker
+  namespace: nf-etl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: celery-worker
+  template:
+    metadata:
+      labels:
+        network/nfetl: "true"
+        service: celery-worker
+      namespace: nf-etl
+    spec:
+      containers:
+        - image: ghcr.io/seeusim/nfinsight_analytics/nf_etl_celery:latest
+          name: celery-worker
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: ghcr-login-secret

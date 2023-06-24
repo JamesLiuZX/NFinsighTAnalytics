@@ -23,7 +23,7 @@ services:
     #   - analytics_net
   
   celery_worker:
-    image: nf_etl_celery
+    image: nf_etl_celery:latest
     build:
       dockerfile: celery.Dockerfile
     # networks:
@@ -33,7 +33,7 @@ services:
       - redis
   
   fastapi_application:
-    image: nf_etl_api
+    image: nf_etl_api:latest
     build:
       dockerfile: fastapi.Dockerfile
     ports:

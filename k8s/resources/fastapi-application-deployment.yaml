@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    service: fastapi-application
+  name: fastapi-application
+  namespace: nf-etl
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: fastapi-application
+  template:
+    metadata:
+      labels:
+        network/nfetl: "true"
+        service: fastapi-application
+    spec:
+      containers:
+        - image: ghcr.io/seeusim/nfinsight_analytics/nf_etl_api:v2
+          name: fastapi-application
+          ports:
+            - containerPort: 80
+      imagePullSecrets:
+        - name: ghcr-login-secret
+      restartPolicy: Always
