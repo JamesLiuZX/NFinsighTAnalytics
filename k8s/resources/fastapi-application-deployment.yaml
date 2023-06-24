@@ -18,7 +18,7 @@ spec:
         service: fastapi-application
     spec:
       containers:
-        - image: ghcr.io/seeusim/nfinsight_analytics/nf_etl_api:v2
+        - image: ghcr.io/seeusim/nfinsight_analytics/nf_etl_api:latest
           name: fastapi-application
           ports:
             - containerPort: 80
