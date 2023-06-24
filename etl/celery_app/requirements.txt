@@ -1,0 +1,6 @@
+celery[amqp, redis]
+futurist
+gevent
+
+python-dotenv
+cassandra-driver==3.27.0

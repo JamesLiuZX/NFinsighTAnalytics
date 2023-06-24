@@ -1,12 +1,25 @@
-FROM python:3.9-slim-bullseye
+# Compile Image
+FROM python:3.9-slim-bullseye AS compile-image
 
 WORKDIR /app
 
-COPY requirements.txt requirements.txt
+RUN apt-get update
+RUN apt-get install -y --no-install-recommends build-essential gcc
 
-RUN apt-get update && apt-get install -y gcc
+RUN python -m venv /opt/venv
+# Make sure we use the virtualenv:
+ENV PATH="/opt/venv/bin:$PATH"
 
-RUN pip3 install -r requirements.txt
+COPY ./etl/celery_app/requirements.txt .
+
+RUN pip install -r requirements.txt
+
+# Build Image
+FROM python:3.9-slim-bullseye AS build-image
+COPY --from=compile-image /opt/venv /opt/venv
+
+# Make sure we use the virtualenv:
+ENV PATH="/opt/venv/bin:$PATH"
 
 WORKDIR /app/etl
 
