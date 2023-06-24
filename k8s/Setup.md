@@ -116,7 +116,7 @@ Run <kbd>Cmd + D</kbd> to exit the SSH session.
 
 6. When done, stop the minikube tunnel with <kbd>Cmd + C</kbd>
 
-7. Next, run this command in the `k8s` container:
+7. Next, run this command in the `k8s` folder:
 
 ```sh
 kubectl delete -f ./resources
