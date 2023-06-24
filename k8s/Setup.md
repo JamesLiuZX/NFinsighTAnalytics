@@ -22,7 +22,7 @@ Follow these steps to push the images to GHCR.
 2. Test the log in.
 
 ```sh
-echo $PAT | docker login ghcr.io -u {username}--password-stdin
+echo $PAT | docker login ghcr.io -u {username} --password-stdin
 
 # $ Login Succeeded
 ```
