@@ -11,13 +11,15 @@ passlib[bcrypt]
 cassandra-driver==3.27.0
 requests
 pyopenssl
-azure-cosmos
 
+# Python request
 httpx
 aiometer==0.3.*
 
 # Celery
 celery[amqp,redis]
 flower
-futurist
+
+# Gevent
+futurist 
 gevent

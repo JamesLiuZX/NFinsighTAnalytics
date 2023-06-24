@@ -47,5 +47,5 @@ async def floor_price(collection_addresses: List[str]):
 
     response = await client.post(url, headers=header, json=payload)
 
-    # assert response.status_code == 200
+    assert response.status_code == 200
     return response.json()

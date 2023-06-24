@@ -52,7 +52,7 @@ async def get_top_collections(
     header = get_header()
     response = await client.get(url, params=params, headers=header)
 
-    # assert response.status_code == 200
+    assert response.status_code == 200
     return response.json()
 
 
@@ -68,7 +68,7 @@ async def get_collection_price_history(
     header = get_header()
     response = await client.get(url, headers=header)
 
-    # assert response.status_code == 200
+    assert response.status_code == 200
     return response.json()
 
 
@@ -83,7 +83,7 @@ async def get_collection_sales_volume(
     header = get_header()
     response = await client.get(url, headers=header)
 
-    # assert response.status_code == 200
+    assert response.status_code == 200
     return response.json()
 
 
@@ -98,7 +98,7 @@ async def get_collection_token_supply(
     header = get_header()
     response = await client.get(url, headers=header)
 
-    # assert response.status_code == 200
+    assert response.status_code == 200
     return response.json()
 
 
@@ -113,5 +113,5 @@ async def get_collection_owners_count(
     header = get_header()
     response = await client.get(url, headers=header)
 
-    # assert response.status_code == 200
+    assert response.status_code == 200
     return response.json()

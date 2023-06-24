@@ -1,6 +1,4 @@
 import os
-from ssl import CERT_NONE, PROTOCOL_TLSv1_2, SSLContext
-
 import dotenv
 from fastapi import FastAPI
 

@@ -12,16 +12,39 @@ services:
     volumes:
       - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/
       - ~/.docker-conf/rabbitmq/log/:/var/log/rabbitmq
-    networks:
-      - analytics_net
+    # networks:
+    #   - analytics_net
 
   redis:
     image: redis:latest
     ports:
       - 6379:6379
-    networks:
-      - analytics_net
+    # networks:
+    #   - analytics_net
+  
+  celery_worker:
+    image: celery_worker
+    build:
+      dockerfile: celery.Dockerfile
+    # networks:
+    #   - analytics_net
+    depends_on:
+      - rabbitmq
+      - redis
+  
+  fastapi_application:
+    image: fastapi_application
+    build:
+      dockerfile: fastapi.Dockerfile
+    ports:
+      - 80:80
+    # networks:
+    #   - analytics_net
+    depends_on:
+      - rabbitmq
+      - redis
+      - celery_worker
 
-networks:
-  analytics_net:
-    driver: bridge
+# networks:
+#   analytics_net:
+#     driver: bridge

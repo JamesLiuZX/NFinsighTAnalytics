@@ -1,18 +1,10 @@
 from aiometer import run_all
 from functools import partial
+from celery import Celery
 from fastapi import APIRouter
 import time
 
-from etl.celery_app.celery import (
-    create_rankings,
-    delete_rankings,
-    update_floor,
-    update_owners,
-    update_prices,
-    update_sales,
-    update_tokens,
-    upsert_collection,
-)
+from etl.config import BROKER_URL, CELERY_APP_NAME, REDIS_URL
 from etl.database import CassandraDb
 
 from .gallop.api import floor_price, get_top_collections_gallop
@@ -45,15 +37,17 @@ from .mnemonic.response_types import (
 )
 
 
-router = APIRouter()
-
 TIME_PERIOD_IN_SECONDS = 1
 MNEMONIC_REQUESTS_PER_TIME_PERIOD = 30
 MNEMONIC_DELAY = TIME_PERIOD_IN_SECONDS / MNEMONIC_REQUESTS_PER_TIME_PERIOD
 
+router = APIRouter()
+
+task_broker = Celery(CELERY_APP_NAME, broker=BROKER_URL, backend=REDIS_URL)
+
 
 @router.get("/nft/refresh")
-async def refresh_collections():
+async def refresh_collections(num_days: str = "ONE_DAY"):
     """
     The daily job that runs a refresh on the collections' data.
 
@@ -68,10 +62,20 @@ async def refresh_collections():
     if res["collections"] is None:
         return "Rankings Update failed"
 
+    existing_refresh_amount_map = {
+        "ONE_DAY": MnemonicQuery__RecordsDuration.ONE_DAY,
+        "SEVEN_DAYS": MnemonicQuery__RecordsDuration.SEVEN_DAYS,
+    }
+
     # 2.1: Populate past ONE DAY of new data for existing collections
     new_collections = set(res["collections"]).difference(existing_collections)
     refresh_jobs = [
-        partial(upsert_collection_data, collection, populate_data=True)
+        partial(
+            upsert_collection_data,
+            collection,
+            populate_data=True,
+            duration=existing_refresh_amount_map[num_days],
+        )
         for collection in existing_collections
     ]
 
@@ -132,7 +136,7 @@ async def update_collections_ranking():
 
     # 1: DELETE existing rankings
     out = set()
-    delete_rankings.delay()
+    task_broker.send_task("delete_rankings")
 
     # 2.1: Populate Mnemonic Rankings
     # As there is a time delay in between each `create_ranking` invocation,
@@ -145,8 +149,9 @@ async def update_collections_ranking():
             for ranking in top_collections["collections"]:
                 out.add(ranking["collection"]["contractAddress"])
 
-            create_rankings.apply_async(
-                (
+            task_broker.send_task(
+                "create_rankings",
+                args=(
                     [
                         {
                             "contract_address": rank["collection"]["contractAddress"],
@@ -156,7 +161,7 @@ async def update_collections_ranking():
                     ],
                     MnemonicQuery__RankType[rank]._value_,
                     MnemonicQuery__RecordsDuration[duration]._value_,
-                )
+                ),
             )
             time.sleep(MNEMONIC_DELAY)
 
@@ -172,8 +177,9 @@ async def update_collections_ranking():
             for ranking in top_collections["response"]["leaderboard"]:
                 out.add(ranking["collection_address"])
 
-            create_rankings.apply_async(
-                (
+            task_broker.send_task(
+                "create_rankings",
+                args=(
                     [
                         {
                             "contract_address": rank["collection_address"],
@@ -183,7 +189,7 @@ async def update_collections_ranking():
                     ],
                     GallopRankMetric[rank]._value_,
                     GallopRankingPeriod[duration]._value_,
-                )
+                ),
             )
             time.sleep(MNEMONIC_DELAY)
 
@@ -196,8 +202,8 @@ async def update_collections_ranking():
 @router.get("/upsert_collection_data")
 async def upsert_collection_data(
     contract_address: str,
-    duration: MnemonicQuery__RecordsDuration = MnemonicQuery__RecordsDuration.ONE_DAY,
     populate_data=False,
+    duration: MnemonicQuery__RecordsDuration = MnemonicQuery__RecordsDuration.ONE_DAY,
 ):
     """
     Retrieves 5 sets of data:
@@ -238,10 +244,10 @@ async def upsert_collection_data(
     # Update data points in database.
     if populate_data:
         _, prices, sales, tokens, owners = results
-        update_prices.apply_async(args=(contract_address, prices))
-        update_sales.apply_async(args=(contract_address, sales))
-        update_tokens.apply_async(args=(contract_address, tokens))
-        update_owners.apply_async(args=(contract_address, owners))
+        task_broker.send_task("update_prices", args=(contract_address, prices))
+        task_broker.send_task("update_sales", args=(contract_address, sales))
+        task_broker.send_task("update_tokens", args=(contract_address, tokens))
+        task_broker.send_task("update_owners", args=(contract_address, owners))
 
     return results
 
@@ -276,7 +282,8 @@ async def populate_collection_meta(
             ext_url = meta["value"]
 
     # insert into database
-    upsert_collection.apply_async(
+    task_broker.send_task(
+        "upsert_collection",
         args=(
             contract_address,
             image,
@@ -312,4 +319,4 @@ async def get_set_floor():
             continue
 
         floor_prices = gallop_response["response"]["collections"]
-        update_floor.apply_async(kwargs=({"floor_prices": floor_prices}))
+        task_broker.send_task("update_floor", kwargs=({"floor_prices": floor_prices}))

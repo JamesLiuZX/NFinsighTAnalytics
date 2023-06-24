@@ -4,26 +4,28 @@ from celery.app import Celery
 from celery.signals import worker_process_init
 
 from .celery_utils import format_gallop_timestamp, format_timestring, or_else
-
-from etl.database import CassandraDb
-from etl.fastapi_app.nft.mnemonic.response_types import (
+from .mnemonic.response_types import (
     MnemonicOwnersSeries,
     MnemonicPriceSeries,
     MnemonicSalesVolumeSeries,
     MnemonicTokensSeries,
 )
 
+from etl.config import BROKER_URL, CELERY_APP_NAME, REDIS_URL
+from etl.database import CassandraDb
+
 BATCH_STEP = 30
 
-BROKER_URL = "amqp://localhost"
-REDIS_URL = "redis://localhost"
-
-
 worker_process_init.connect(CassandraDb.c_init)
-app = Celery(__name__, broker=BROKER_URL, backend=REDIS_URL)
+app = Celery(CELERY_APP_NAME, broker=BROKER_URL, backend=REDIS_URL)
+
+###############################################################################
+"""
+COLLECTIONS
+"""
 
 
-@app.task
+@app.task(name="upsert_collection")
 def upsert_collection(
     contract_address: str,
     image: str,
@@ -81,7 +83,13 @@ def upsert_collection(
         }
 
 
-@app.task
+###############################################################################
+"""
+RANKINGS
+"""
+
+
+@app.task(name="get_rankings")
 def get_rankings():
     session = CassandraDb.get_db_session()
 
@@ -104,7 +112,7 @@ def get_rankings():
         pass
 
 
-@app.task
+@app.task(name="create_ranking")
 def create_ranking(
     contract_address: str, metric_value: str, rank_type: str, rank_duration: str
 ):
@@ -133,7 +141,7 @@ def create_ranking(
         }
 
 
-@app.task
+@app.task(name="create_rankings")
 def create_rankings(
     rankings,
     rank_metric,
@@ -166,7 +174,7 @@ def create_rankings(
     }
 
 
-@app.task
+@app.task(name="delete_rankings")
 def delete_rankings():
     session = CassandraDb.get_db_session()
     error = ""
@@ -181,7 +189,13 @@ def delete_rankings():
     }
 
 
-@app.task
+###############################################################################
+"""
+DATAPOINTS
+"""
+
+
+@app.task(name="update_prices")
 def update_prices(contract_address: str, prices: MnemonicPriceSeries):
     """
     While this may be vulnerable to CQL injection,
@@ -220,7 +234,7 @@ def update_prices(contract_address: str, prices: MnemonicPriceSeries):
     }
 
 
-@app.task
+@app.task(name="update_sales")
 def update_sales(contract_address: str, sales: MnemonicSalesVolumeSeries):
     session = CassandraDb.get_db_session()
 
@@ -254,7 +268,7 @@ def update_sales(contract_address: str, sales: MnemonicSalesVolumeSeries):
     }
 
 
-@app.task
+@app.task(name="update_tokens")
 def update_tokens(contract_address: str, tokens: MnemonicTokensSeries):
     session = CassandraDb.get_db_session()
 
@@ -290,7 +304,7 @@ def update_tokens(contract_address: str, tokens: MnemonicTokensSeries):
     }
 
 
-@app.task
+@app.task(name="update_owners")
 def update_owners(contract_address: str, owners: MnemonicOwnersSeries):
     session = CassandraDb.get_db_session()
 
@@ -323,7 +337,13 @@ def update_owners(contract_address: str, owners: MnemonicOwnersSeries):
     }
 
 
-@app.task
+###############################################################################
+"""
+COLLECTIONS.FLOOR
+"""
+
+
+@app.task(name="update_floor")
 def update_floor(floor_prices=[]):
     session = CassandraDb.get_db_session()
     statement = []
