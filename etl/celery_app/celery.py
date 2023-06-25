@@ -185,7 +185,7 @@ def delete_rankings():
 
     return {
         "operation": "ranking/delete/all",
-        "status": "success" if not error else error,
+        "status": "success" if not error else ",\n".join(errors),
     }
 
 
@@ -230,7 +230,7 @@ def update_prices(contract_address: str, prices: MnemonicPriceSeries):
 
     return {
         "operation": f"prices/{contract_address}",
-        "status": "success" if not errors else errors,
+        "status": "success" if not errors else ",\n".join(errors),
     }
 
 
@@ -264,7 +264,7 @@ def update_sales(contract_address: str, sales: MnemonicSalesVolumeSeries):
 
     return {
         "operation": f"sales/{contract_address}",
-        "status": "success" if not errors else errors,
+        "status": "success" if not errors else ",\n".join(errors),
     }
 
 
@@ -300,7 +300,7 @@ def update_tokens(contract_address: str, tokens: MnemonicTokensSeries):
 
     return {
         "operation": f"tokens/{contract_address}",
-        "status": "success" if not errors else errors,
+        "status": "success" if not errors else ",\n".join(errors),
     }
 
 
@@ -333,7 +333,7 @@ def update_owners(contract_address: str, owners: MnemonicOwnersSeries):
 
     return {
         "operation": f"owners/{contract_address}",
-        "status": "success" if not errors else errors,
+        "status": "success" if not errors else ",\n".join(errors),
     }
 
 
@@ -380,12 +380,16 @@ def update_floor(floor_prices=[]):
             "BEGIN UNLOGGED BATCH\n" + "\n".join(statement) + "\nAPPLY BATCH"
         )
         return {
-            "operation": f"floor/10\n[{'|'.join([fpl['collection_address'] for fpl in floor_prices])}]",
+            "operation": f"floor/{len(floor_prices)}\n[\n    "
+            + ",\n    ".join([fpl["collection_address"] for fpl in floor_prices])
+            + "\n]",
             "status": "success",
         }
     except Exception as e:
         return {
-            "operation": f"floor/10\n[{'|'.join([fpl['collection_address'] for fpl in floor_prices])}]",
+            "operation": f"floor/{len(floor_prices)}\n[\n    "
+            + ",\n    ".join([fpl["collection_address"] for fpl in floor_prices])
+            + "\n]",
             "status": "failed",
             "message": e.__str__(),
         }
