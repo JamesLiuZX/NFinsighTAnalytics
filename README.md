@@ -6,7 +6,7 @@ This is the repo for NFInsight's ETL server.
 
 This repo consists of the Docker application code needed to run the ETL layer, in the above diagram. 
 
-In the future, we hope to incorporate some analytics workflows with Tensorflow and Spark.
+In the future, we hope to incorporate some analytics workflows with these Cassandra clusters, and Tensorflow and Spark.
 
 Developed by [@SeeuSim](https://github.com/SeeuSim) and [@JamesLiuZx](https://github.com/JamesLiuZX)
 
