@@ -1,6 +1,12 @@
 # NFInsight Analytics
 
-This is the repo for NFInsight's ETL and Analytics server.
+This is the repo for NFInsight's ETL server.
+
+![image](https://github.com/SeeuSim/nfinsight_analytics/assets/90857020/17e95414-4c12-4442-93d5-ccdbcc395e05)
+
+This repo consists of the Docker application code needed to run the ETL layer, in the above diagram. 
+
+In the future, we hope to incorporate some analytics workflows with Tensorflow and Spark.
 
 ## Set up
 
