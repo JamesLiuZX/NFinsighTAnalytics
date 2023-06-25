@@ -15,7 +15,7 @@ Developed by [@SeeuSim](https://github.com/SeeuSim) and [@JamesLiuZx](https://gi
 To run, simply follow these steps:
 
 1. Clone the repo.
-2. Create a virtual environment within the directory. We recommend using Python 3.10.
+2. Create a virtual environment within the directory. We recommend using Python 3.9.
 3. Activate the virtual environment.
 4. Grab your API connection strings and populate it in a `.env` file in the `/etl/fastapi_app` folder.
     - You may use the `.env.example` as a guideline.
