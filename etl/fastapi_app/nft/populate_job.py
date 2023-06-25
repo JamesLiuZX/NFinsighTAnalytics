@@ -62,7 +62,7 @@ async def refresh_collections(
 
     # 1. Update rankings, and get a set of all collections referenced
     # Get all existing collections
-    existing_collections = set(get_collections())
+    existing_collections = set(get_collections(current_user))
 
     res = await update_collections_ranking()
     if res["collections"] is None:
@@ -323,7 +323,7 @@ async def get_set_floor(
     Retrieves a set of market place data floor prices, which is passed to a Celery worker to process.
     """
     GALLOP_STEP_SIZE = 10
-    collections = get_collections()
+    collections = get_collections(current_user)
 
     for i in range(0, len(collections), GALLOP_STEP_SIZE):
         gallop_response = await floor_price(collections[i : i + GALLOP_STEP_SIZE])

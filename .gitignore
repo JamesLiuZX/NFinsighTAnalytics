@@ -4,12 +4,10 @@ __pycache__
 
 # Environment Variables
 .env
+**/*.local.sh
 
 # Python Venv
 .venv
-
-# Node Packages (for Prisma)
-node_modules
 
 # Editor Specific
 .vscode
