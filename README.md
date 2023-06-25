@@ -133,7 +133,7 @@ If Kubernetes is more your thing, we also provide a set up for kubernetes.
 
 We also provide a Kubernetes workflow under `k8s/Setup.md`.
 
-**Pre-requisites:**: Modify the kubernetes scripts image tags for the celery deployment and the fastapi deployment to point to your local images that were previously built with docker compose.
+**Pre-requisites:** Modify the kubernetes scripts image tags for the celery deployment and the fastapi deployment to point to your local images that were previously built with docker compose.
 
 They may be found under: `./k8s/resources/celery-worker-deployment.yaml` and `./k8s/resources/fastapi-application-deployment.yaml`.
 
