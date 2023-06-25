@@ -8,7 +8,7 @@ First, build all the requisite images and test that they work locally with Docke
 
 ```sh
 # dir: ./
-docker-compose up --build
+docker-compose build
 ```
 
 Once all the behaviors have been verified, you may proceed to the next step.
