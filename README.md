@@ -8,6 +8,8 @@ This repo consists of the Docker application code needed to run the ETL layer, i
 
 In the future, we hope to incorporate some analytics workflows with Tensorflow and Spark.
 
+Developed by [@SeeuSim](https://github.com/SeeuSim) and [@JamesLiuZx](https://github.com/JamesLiuZX)
+
 ## Set up
 
 To run, simply follow these steps:
@@ -46,7 +48,6 @@ The server should be up and running. To visit the OpenAPI spec, simply go to `12
 
 9. To spin down the server, simply run <kbd>Cmd + C</kbd> in the Docker Compose terminal.
 
-Developed by @SeeuSim and @JamesLiuZX
 
 ### Astra set up on local
 
