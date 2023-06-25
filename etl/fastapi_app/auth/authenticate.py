@@ -4,13 +4,17 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
+from .auth_helpers import (
+    authenticate_user,
+    create_access_token,
+    get_current_active_user,
+    fake_users_db,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+)
 from .models import Token, User
-from .auth_helpers import \
-    authenticate_user, create_access_token, get_current_active_user, \
-    fake_users_db, \
-    ACCESS_TOKEN_EXPIRE_MINUTES
 
 router = APIRouter()
+
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(
@@ -42,5 +46,3 @@ async def read_own_items(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
     return [{"item_id": "Foo", "owner": current_user.username}]
-
-

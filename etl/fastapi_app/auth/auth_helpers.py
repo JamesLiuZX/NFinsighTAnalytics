@@ -10,7 +10,6 @@ from ..dependencies import oauth2_scheme, pwd_context
 from .models import TokenData, User, UserInDB
 
 
-SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -20,7 +19,8 @@ fake_users_db = {
         "username": "johndoe",
         "full_name": "John Doe",
         "email": "johndoe@example.com",
-        "hashed_password": "$2b$12$aTNvrMcVi9BhYKqAbr/ZtuuGJCUyB4F1Bzs3hA8MdpzP.hQdqE0n.",
+        # "hashed_password": "$2b$12$aTNvrMcVi9BhYKqAbr/ZtuuGJCUyB4F1Bzs3hA8MdpzP.hQdqE0n.",
+        "hashed_password": "$2b$12$csxG/AGdVGFlYLkoIL95euW8AvNxUYJr6EVohILzPCn80eF8OABcC",
         "disabled": False,
     }
 }
@@ -41,6 +41,8 @@ def get_user(db, username: str):
 
 
 def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None):
+    SECRET_KEY = os.getenv("SECRET_KEY")
+
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
@@ -61,6 +63,8 @@ def authenticate_user(fake_db, username: str, password: str):
 
 
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+    SECRET_KEY = os.getenv("SECRET_KEY")
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",

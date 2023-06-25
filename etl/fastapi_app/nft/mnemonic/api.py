@@ -30,7 +30,7 @@ def get_header():
     return {"accept": "application/json", "X-API-Key": os.environ["MNEMONIC_API_KEY"]}
 
 
-@router.get("/collection_meta")
+# @router.get("/collection_meta")
 async def get_collection_meta(contract_address: str) -> MnemonicCollectionsMetaResponse:
     url = f"https://ethereum-rest.api.mnemonichq.com/collections/v1beta2/{contract_address}/metadata?includeStats=true"
     header = get_header()
@@ -40,7 +40,7 @@ async def get_collection_meta(contract_address: str) -> MnemonicCollectionsMetaR
     return response.json()
 
 
-@router.get("/top_collections")
+# @router.get("/top_collections")
 async def get_top_collections(
     rank: MnemonicQuery__RankType,
     time_period: MnemonicQuery__RecordsDuration,
@@ -56,7 +56,7 @@ async def get_top_collections(
     return response.json()
 
 
-@router.get("/collection_price_history")
+# @router.get("/collection_price_history")
 async def get_collection_price_history(
     contract_address: str,
     time_period: MnemonicQuery__RecordsDuration,

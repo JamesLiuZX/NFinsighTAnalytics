@@ -1,11 +1,14 @@
+from typing import Annotated
 from aiometer import run_all
 from functools import partial
 from celery import Celery
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 import time
 
 from etl.config import BROKER_URL, CELERY_APP_NAME, REDIS_URL
 from etl.database import CassandraDb
+from ..auth.auth_helpers import get_current_active_user
+from ..auth.models import User
 
 from .gallop.api import floor_price, get_top_collections_gallop
 
@@ -47,7 +50,10 @@ task_broker = Celery(CELERY_APP_NAME, broker=BROKER_URL, backend=REDIS_URL)
 
 
 @router.get("/nft/refresh")
-async def refresh_collections(num_days: str = "ONE_DAY"):
+async def refresh_collections(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    num_days: str = "ONE_DAY",
+):
     """
     The daily job that runs a refresh on the collections' data.
 
@@ -72,6 +78,7 @@ async def refresh_collections(num_days: str = "ONE_DAY"):
     refresh_jobs = [
         partial(
             upsert_collection_data,
+            current_user,
             collection,
             populate_data=True,
             duration=existing_refresh_amount_map[num_days],
@@ -84,6 +91,7 @@ async def refresh_collections(num_days: str = "ONE_DAY"):
         refresh_jobs.append(
             partial(
                 upsert_collection_data,
+                current_user,
                 contract_address,
                 duration=MnemonicQuery__RecordsDuration.ONE_YEAR,  # needed for new collections datapoints
                 populate_data=True,
@@ -94,11 +102,13 @@ async def refresh_collections(num_days: str = "ONE_DAY"):
     await run_all(refresh_jobs, max_at_once=1)
 
     # 3: Refresh floor price
-    await get_set_floor()
+    await get_set_floor(current_user)
 
 
 @router.get("/nft/populate_data")
-async def populate_data():
+async def populate_data(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
     """
     Performs a bulk populate data points job of 365 daily points per collection for new database setup.
     """
@@ -116,7 +126,9 @@ async def populate_data():
 
 
 @router.get("/collections/get")
-def get_collections():
+def get_collections(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
     """
     Returns all collection addresses currently in the database.
     """
@@ -201,6 +213,7 @@ async def update_collections_ranking():
 
 @router.get("/upsert_collection_data")
 async def upsert_collection_data(
+    current_user: Annotated[User, Depends(get_current_active_user)],
     contract_address: str,
     populate_data=False,
     duration: MnemonicQuery__RecordsDuration = MnemonicQuery__RecordsDuration.ONE_DAY,
@@ -302,7 +315,9 @@ async def populate_collection_meta(
 
 
 @router.get("/floor_price/set")
-async def get_set_floor():
+async def get_set_floor(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
     """
     Sends collection addresses to the GALLOP API in batches of 10 as per their restriction.
     Retrieves a set of market place data floor prices, which is passed to a Celery worker to process.

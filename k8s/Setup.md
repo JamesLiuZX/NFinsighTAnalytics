@@ -109,7 +109,7 @@ Run <kbd>Cmd + C</kbd> to exit the logs session.
 kubectl -n nf-etl exec -it pod/$(kubectl -n nf-etl get pod | grep celery | awk '{print $1}') -- /bin/sh
 
 # API
-kubectl -n nf-etl logs -it pod/$(kubectl -n nf-etl get pod | grep fastapi | awk '{print $1}') -- /bin/sh
+kubectl -n nf-etl exec -it pod/$(kubectl -n nf-etl get pod | grep fastapi | awk '{print $1}') -- /bin/sh
 ```
 
 Run <kbd>Cmd + D</kbd> to exit the SSH session.

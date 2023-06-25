@@ -21,7 +21,7 @@ def get_header():
     }
 
 
-@router.get("/top_collections", response_model=GallopTopCollectionResponse)
+# @router.get("/top_collections", response_model=GallopTopCollectionResponse)
 async def get_top_collections_gallop(
     rank: GallopRankMetric, rank_duration: GallopRankingPeriod, num_records: int = 100
 ) -> GallopTopCollectionResponse:
@@ -38,7 +38,7 @@ async def get_top_collections_gallop(
     return response.json()
 
 
-@router.post("/floor_price")
+# @router.post("/floor_price")
 async def floor_price(collection_addresses: List[str]):
     assert len(collection_addresses) > 0
     url = "https://api.prod.gallop.run/v1/data/eth/getMarketplaceFloorPrice"
