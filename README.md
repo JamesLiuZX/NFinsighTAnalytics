@@ -35,6 +35,28 @@ Additional care needs to be taken when setting up the database. Please refer to 
 
 6. Insert an admin user with username and bcrypt hashed password into the `admin_user` table.
 
+  6.1. Generate the password with Python:
+
+  ```python
+  from passlib.Context import CryptContext
+  
+  context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+  
+  password="{PASSWORD}"
+  hashed_password=context.hash(password)
+
+  print(hashed_password)
+  # >> 'hashed password'
+  ```
+
+  6.2. Insert the user into your database with its CQL shell.
+  
+  ```cql
+  INSERT INTO admin_user (username, hashed_password, disabled)
+  VALUES ('{username}', '{hashed_password}', false);
+  -- >> Values inserted
+  ```
+
 7. Run these commands:
 
 ```shell
@@ -44,7 +66,7 @@ docker compose up --build
 
 The server should be up and running. To visit the OpenAPI spec, simply go to `127.0.0.1/docs` in your browser.
 
-8. To trigger authenticated routes, key in the credentials from step 6 and click `authenticate` in the OpenAPI spec,
+8. To trigger authenticated routes, key in the credentials from step 6 and click `authenticate` in the OpenAPI spec.
 
 9. To spin down the server, simply run <kbd>Cmd + C</kbd> in the Docker Compose terminal.
 
