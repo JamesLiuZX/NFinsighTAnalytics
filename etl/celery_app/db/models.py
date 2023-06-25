@@ -127,3 +127,14 @@ class DataPoint(Model):
     total_burned = columns.BigInt()
 
     owners_count = columns.BigInt()
+
+class AdminUser(Model):
+    """
+    CREATE TABLE admin_user (
+        username TEXT,
+        hashed_password TEXT,
+        disabled BOOLEAN,
+        PRIMARY KEY (username)
+    );
+    """
+

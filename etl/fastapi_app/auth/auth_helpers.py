@@ -6,24 +6,14 @@ from typing import Annotated, Union
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
 
-from ..dependencies import oauth2_scheme, pwd_context
+from etl.database import CassandraDb
+
 from .models import TokenData, User, UserInDB
+from ..dependencies import oauth2_scheme, pwd_context
 
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-
-fake_users_db = {
-    "johndoe": {
-        "username": "johndoe",
-        "full_name": "John Doe",
-        "email": "johndoe@example.com",
-        # "hashed_password": "$2b$12$aTNvrMcVi9BhYKqAbr/ZtuuGJCUyB4F1Bzs3hA8MdpzP.hQdqE0n.",
-        "hashed_password": "$2b$12$csxG/AGdVGFlYLkoIL95euW8AvNxUYJr6EVohILzPCn80eF8OABcC",
-        "disabled": False,
-    }
-}
 
 
 def verify_password(plain_password, hashed_password):
@@ -34,10 +24,23 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 
-def get_user(db, username: str):
-    if username in db:
-        user_dict = db[username]
-        return UserInDB(**user_dict)
+def get_user(username: str):
+    session = CassandraDb.get_db_session()
+    statement = session.prepare(
+        """
+        SELECT username, hashed_password, disabled
+        FROM admin_user
+        WHERE username = ?
+        """
+    )
+    res = session.execute(statement, [username]).one()
+    if res is None:
+        return None
+    return UserInDB(
+        username=res.username,
+        disabled=res.disabled,
+        hashed_password=res.hashed_password
+    )
 
 
 def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None):
@@ -53,8 +56,8 @@ def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None
     return encoded_jwt
 
 
-def authenticate_user(fake_db, username: str, password: str):
-    user = get_user(fake_db, username)
+def authenticate_user(username: str, password: str):
+    user = get_user(username)
     if not user:
         return False
     if not verify_password(password, user.hashed_password):
@@ -78,7 +81,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         token_data = TokenData(username=username)
     except JWTError:
         raise credentials_exception
-    user = get_user(fake_users_db, username=token_data.username)
+    user = get_user(username=token_data.username)
     if user is None:
         raise credentials_exception
     return user
