@@ -6,14 +6,16 @@ This is the repo for NFInsight's ETL server.
 
 This repo consists of the Docker application code needed to run the ETL layer, in the above diagram. 
 
-In the future, we hope to incorporate some analytics workflows with Tensorflow and Spark.
+In the future, we hope to incorporate some analytics workflows with these Cassandra clusters, and with Tensorflow and Spark.
+
+Developed by [@SeeuSim](https://github.com/SeeuSim) and [@JamesLiuZx](https://github.com/JamesLiuZX)
 
 ## Set up
 
 To run, simply follow these steps:
 
 1. Clone the repo.
-2. Create a virtual environment within the directory. We recommend using Python 3.10.
+2. Create a virtual environment within the directory. We recommend using Python 3.9.
 3. Activate the virtual environment.
 4. Grab your API connection strings and populate it in a `.env` file in the `/etl/fastapi_app` folder.
     - You may use the `.env.example` as a guideline.
@@ -33,6 +35,28 @@ Additional care needs to be taken when setting up the database. Please refer to 
 
 6. Insert an admin user with username and bcrypt hashed password into the `admin_user` table.
 
+  6.1. Generate the password with Python:
+
+  ```python
+  from passlib.Context import CryptContext
+  
+  context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+  
+  password="{PASSWORD}"
+  hashed_password=context.hash(password)
+
+  print(hashed_password)
+  # >> 'hashed password'
+  ```
+
+  6.2. Insert the user into your database with its CQL shell.
+  
+  ```cql
+  INSERT INTO admin_user (username, hashed_password, disabled)
+  VALUES ('{username}', '{hashed_password}', false);
+  -- >> Values inserted
+  ```
+
 7. Run these commands:
 
 ```shell
@@ -42,11 +66,10 @@ docker compose up --build
 
 The server should be up and running. To visit the OpenAPI spec, simply go to `127.0.0.1/docs` in your browser.
 
-8. To trigger authenticated routes, key in the credentials from step 6 and click `authenticate` in the OpenAPI spec,
+8. To trigger authenticated routes, key in the credentials from step 6 and click `authenticate` in the OpenAPI spec.
 
 9. To spin down the server, simply run <kbd>Cmd + C</kbd> in the Docker Compose terminal.
 
-Developed by @SeeuSim and @JamesLiuZX
 
 ### Astra set up on local
 
@@ -132,7 +155,7 @@ If Kubernetes is more your thing, we also provide a set up for kubernetes.
 
 We also provide a Kubernetes workflow under `k8s/Setup.md`.
 
-**Pre-requisites:**: Modify the kubernetes scripts image tags for the celery deployment and the fastapi deployment to point to your local images that were previously built with docker compose.
+**Pre-requisites:** Modify the kubernetes scripts image tags for the celery deployment and the fastapi deployment to point to your local images that were previously built with docker compose.
 
 They may be found under: `./k8s/resources/celery-worker-deployment.yaml` and `./k8s/resources/fastapi-application-deployment.yaml`.
 
