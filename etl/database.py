@@ -3,6 +3,9 @@ from dotenv import load_dotenv
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
 
+from psycopg2 import pool
+from psycopg2.extras import execute_batch
+
 # from ssl import CERT_NONE, PROTOCOL_TLSv1_2, SSLContext
 # from cassandra.cqlengine import connection
 # from cassandra.policies import RoundRobinPolicy
@@ -76,3 +79,53 @@ class CassandraDb:
             return cls.db_session
         CassandraDb.c_init()
         return cls.db_session
+
+
+PG_PORT = os.environ["PG_PORT"]
+PG_URI = os.environ["PG_CONN_STRING"]
+PG_PASSWORD = os.environ["PG_PASSWORD"]
+PG_CONN_STRING = f"postgres://postgres:{PG_PASSWORD}@{PG_URI}:{PG_PORT}/postgres"
+
+
+class PostgresSearchDb:
+    DB_POOL = None
+
+    @classmethod
+    def get_pool(cls):
+        if cls.DB_POOL is None:
+            cls.DB_POOL = pool.ThreadedConnectionPool(
+                0,  # Min Connection
+                4,  # Max Connection (4 Threads)
+                user="postgres",
+                password=PG_PASSWORD,
+                host=PG_URI,
+                database="postgres",
+            )
+        return cls.DB_POOL
+
+    @classmethod
+    def execute_query_batch(cls, query, params):
+        pool = cls.get_pool()
+        connection = pool.getconn()
+        if connection:
+            cursor = connection.cursor()
+            execute_batch(cursor, query, params)
+            cursor.close()
+            connection.commit()
+            pool.putconn(connection)
+        else:
+            print("Unable to get connection")
+    
+    @classmethod
+    def execute_query(cls, query):
+        pool = cls.get_pool()
+        connection = pool.getconn()
+        if connection:
+            cursor = connection.cursor()
+            cursor.execute(query)
+            cursor.close()
+            connection.commit()
+            pool.putconn(connection)
+        else:
+            print("Unable to get connection")
+    

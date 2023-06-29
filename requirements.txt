@@ -23,3 +23,6 @@ flower
 # Gevent
 futurist 
 gevent
+
+#Postgres
+psycopg2

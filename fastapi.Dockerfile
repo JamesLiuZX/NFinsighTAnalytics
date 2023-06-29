@@ -3,8 +3,8 @@ FROM python:3.9-slim-bullseye AS compile-image
 
 WORKDIR /app
 
-RUN apt-get update
-RUN apt-get install -y --no-install-recommends build-essential gcc
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends build-essential musl-dev libpq-dev gcc
 
 RUN python -m venv /opt/venv
 # Make sure we use the virtualenv:
@@ -16,10 +16,15 @@ RUN pip install -r requirements.txt
 
 # Build image
 FROM python:3.9-slim-bullseye AS build-image
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libpq-dev
+
 COPY --from=compile-image /opt/venv /opt/venv
 
 # Make sure we use the virtualenv:
-ENV PATH="/opt/venv/bin:$PATH"
+ENV PATH="/opt/venv/bin:$PATH" \
+  PYTHONDONTWRITEBYTECODE=1
 
 WORKDIR /app/etl
 

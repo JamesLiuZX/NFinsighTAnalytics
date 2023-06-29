@@ -12,7 +12,7 @@ from .mnemonic.response_types import (
 )
 
 from etl.config import BROKER_URL, CELERY_APP_NAME, REDIS_URL
-from etl.database import CassandraDb
+from etl.database import CassandraDb, PostgresSearchDb
 
 BATCH_STEP = 30
 
@@ -185,7 +185,7 @@ def delete_rankings():
 
     return {
         "operation": "ranking/delete/all",
-        "status": "success" if not error else ",\n".join(errors),
+        "status": "success" if not error else error,
     }
 
 
@@ -393,3 +393,82 @@ def update_floor(floor_prices=[]):
             "status": "failed",
             "message": e.__str__(),
         }
+
+
+###############################################################################
+# Migrate existing index data to Postgres
+
+
+@app.task(name="migrate_collections")
+def migrate_collections():
+    cassandra_session = CassandraDb.get_db_session()
+    res = cassandra_session.execute(
+        """
+        SELECT *
+        FROM collection
+        """
+    )
+    query_string = """
+        INSERT INTO collection (address, name, type, tokens, owners, sales_volume, image, banner_image, description, external_url, floor)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """
+    tuples = []
+    for row in res:
+        tuples.append(
+            (
+                row.address,
+                row.name,
+                row.type,
+                row.tokens,
+                row.owners,
+                row.sales_volume,
+                row.image,
+                row.banner_image,
+                row.description,
+                row.external_url,
+                row.floor,
+            )
+        )
+    try:
+        PostgresSearchDb.execute_query("DELETE FROM collection")
+        res = PostgresSearchDb.execute_query_batch(query_string, tuples)
+        return "Collection - Success"
+    except Exception as e:
+        return e.__str__()
+
+
+@app.task(name="migrate_rankings")
+def migrate_rankings():
+    cassandra_session = CassandraDb.get_db_session()
+    res = cassandra_session.execute(
+        """
+        SELECT *
+        FROM ranking
+        """
+    )
+    query_string = """
+        INSERT INTO ranking (duration, rank, collection, value)
+        VALUES (%s, %s, %s, %s)
+        """
+    tuples = []
+    for row in res:
+        tuples.append(
+            (
+                row.duration,
+                row.rank,
+                row.collection,
+                row.value,
+            )
+        )
+    try:
+        PostgresSearchDb.execute_query("DELETE FROM ranking")
+        res = PostgresSearchDb.execute_query_batch(query_string, tuples)
+        return "Ranking - Success"
+    except Exception as e:
+        return e.__str__()
+
+
+@app.task(name="migrate")
+def migrate():
+    migrate_collections()
+    migrate_rankings()

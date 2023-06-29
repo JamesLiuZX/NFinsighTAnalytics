@@ -73,6 +73,19 @@ class Ranking(Model):
         PRIMARY KEY ((rank, duration), collection)
     );
     ```
+
+    ```sql
+    CREATE TABLE ranking (
+        duration VARCHAR(30),
+        rank VARCHAR(30),
+        collection VARCHAR(50) NOT NULL,
+        PRIMARY KEY (duration, rank, collection),
+        CONSTRAINT fk_collection
+            FOREIGN KEY (collection)
+                REFERENCES collection(address)
+                ON DELETE CASCADE
+    );
+    ```
     """
 
     __keyspace__ = "nf-main-keyspace"
@@ -128,6 +141,7 @@ class DataPoint(Model):
 
     owners_count = columns.BigInt()
 
+
 class AdminUser(Model):
     """
     CREATE TABLE admin_user (
@@ -137,4 +151,3 @@ class AdminUser(Model):
         PRIMARY KEY (username)
     );
     """
-

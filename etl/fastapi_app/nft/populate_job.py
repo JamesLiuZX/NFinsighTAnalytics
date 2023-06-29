@@ -104,6 +104,9 @@ async def refresh_collections(
     # 3: Refresh floor price
     await get_set_floor(current_user)
 
+    task_broker.send_task("migrate")
+    # task_broker.send_task("migrate_rankings")
+
 
 @router.get("/nft/populate_data")
 async def populate_data(
@@ -335,3 +338,8 @@ async def get_set_floor(
 
         floor_prices = gallop_response["response"]["collections"]
         task_broker.send_task("update_floor", kwargs=({"floor_prices": floor_prices}))
+
+
+@router.get("/migrate")
+async def migrate_collections(task_name: str):
+    task_broker.send_task("migrate_" + task_name)
