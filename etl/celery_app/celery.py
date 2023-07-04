@@ -149,6 +149,10 @@ def create_rankings(
 ):
     session = CassandraDb.get_db_session()
     statements = []
+    if not len(rankings):
+        return {
+            "message": f'{rank_metric}/{duration}/empty'
+        }
     for rank in rankings:
         statements.append(
             f"""
@@ -204,6 +208,10 @@ def update_prices(contract_address: str, prices: MnemonicPriceSeries):
     session = CassandraDb.get_db_session()
 
     statement = []
+    if not len(prices['dataPoints']):
+        return {
+            "message": f"{contract_address}/owners/empty"
+        }
     for point in prices["dataPoints"]:
         statement.append(
             f"""
@@ -239,6 +247,10 @@ def update_sales(contract_address: str, sales: MnemonicSalesVolumeSeries):
     session = CassandraDb.get_db_session()
 
     statement = []
+    if not len(sales['dataPoints']):
+        return {
+            "message": f"{contract_address}/owners/empty"
+        }
     for point in sales["dataPoints"]:
         statement.append(
             f"""
@@ -273,6 +285,10 @@ def update_tokens(contract_address: str, tokens: MnemonicTokensSeries):
     session = CassandraDb.get_db_session()
 
     statement = []
+    if not len(tokens['dataPoints']):
+        return {
+            "message": f"{contract_address}/tokens/empty"
+        }
     for point in tokens["dataPoints"]:
         statement.append(
             f"""
@@ -309,6 +325,10 @@ def update_owners(contract_address: str, owners: MnemonicOwnersSeries):
     session = CassandraDb.get_db_session()
 
     statement = []
+    if not len(owners['dataPoints']):
+        return {
+            "message": f"{contract_address}/owners/empty"
+        }
     for point in owners["dataPoints"]:
         statement.append(
             f"""
