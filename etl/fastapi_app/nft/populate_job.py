@@ -52,7 +52,7 @@ task_broker = Celery(CELERY_APP_NAME, broker=BROKER_URL, backend=REDIS_URL)
 @router.get("/nft/refresh")
 async def refresh_collections(
     current_user: Annotated[User, Depends(get_current_active_user)],
-    num_days: str = "SEVEN_DAYS",
+    num_days: str = "ONE_DAY",
 ):
     """
     The daily job that runs a refresh on the collections' data.
