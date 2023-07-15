@@ -72,7 +72,7 @@ async def get_collection_price_history(
 
     res = response.json()
     if "dataPoints" not in res:
-        res['dataPoints'] = []
+        res["dataPoints"] = []
     return res
 
 
@@ -89,7 +89,7 @@ async def get_collection_sales_volume(
 
     res = response.json()
     if "dataPoints" not in res:
-        res['dataPoints'] = []
+        res["dataPoints"] = []
     return res
 
 
@@ -106,7 +106,7 @@ async def get_collection_token_supply(
 
     res = response.json()
     if "dataPoints" not in res:
-        res['dataPoints'] = []
+        res["dataPoints"] = []
     return res
 
 
@@ -123,5 +123,5 @@ async def get_collection_owners_count(
 
     res = response.json()
     if "dataPoints" not in res:
-        res['dataPoints'] = []
+        res["dataPoints"] = []
     return res
